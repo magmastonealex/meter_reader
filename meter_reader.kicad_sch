@@ -5,163 +5,6 @@
 	(uuid "831cbbc0-6453-4319-8c40-1a869c1d0e81")
 	(paper "A4")
 	(lib_symbols
-		(symbol "AA_Inventree:CAP-0603-0.1uF_25V"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0.254)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "C"
-				(at 0.635 2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Value" "0.1uF_25V"
-				(at 0.635 -2.54 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-				(at 0.9652 -3.81 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "InvenTree" "80"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/80/"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "IPN" "CAP-0603-0.1uF_25V"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "Capacitor_SMD:C_0603_1608Metric"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "CAP-0603-0.1uF_25V_0_1"
-				(polyline
-					(pts
-						(xy -2.032 0.762) (xy 2.032 0.762)
-					)
-					(stroke
-						(width 0.508)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -2.032 -0.762) (xy 2.032 -0.762)
-					)
-					(stroke
-						(width 0.508)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "CAP-0603-0.1uF_25V_1_1"
-				(pin passive line
-					(at 0 3.81 270)
-					(length 2.794)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 0 -3.81 90)
-					(length 2.794)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "AA_Inventree:CAP-0805-0.1uF"
 			(pin_numbers
 				(hide yes)
@@ -7035,6 +6878,12 @@
 		(uuid "bfd13454-32c9-4d7f-baca-91156c0d78df")
 	)
 	(junction
+		(at 260.35 93.98)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "13d4b6bd-1264-4025-9a41-ccf721dade27")
+	)
+	(junction
 		(at 134.62 63.5)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7119,12 +6968,6 @@
 		(uuid "8d6c97c9-2f6c-4de5-94d2-81c9435f1fd3")
 	)
 	(junction
-		(at 260.35 93.98)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "9309c903-89b6-4dd8-ab29-1ae4ff32a2f3")
-	)
-	(junction
 		(at 106.68 91.44)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7143,10 +6986,16 @@
 		(uuid "b79b931f-bfa8-472b-b572-7d146fb5ce06")
 	)
 	(junction
+		(at 243.84 93.98)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "c442433e-080c-4ec2-acbe-f9a55d6a6605")
+	)
+	(junction
 		(at 248.92 88.9)
 		(diameter 0)
 		(color 0 0 0 0)
-		(uuid "c0b5f565-1839-412e-8750-08b3205409b5")
+		(uuid "cfc6899a-e5c5-48b2-ab53-bef0b1238ce2")
 	)
 	(junction
 		(at 185.42 44.45)
@@ -7171,12 +7020,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "db25befc-bf95-4986-98fa-1976650090de")
-	)
-	(junction
-		(at 243.84 93.98)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ddacff44-5d85-4d52-8cfb-c00ce75dd1f9")
 	)
 	(junction
 		(at 133.35 39.37)
@@ -7266,16 +7109,6 @@
 	)
 	(wire
 		(pts
-			(xy 236.22 93.98) (xy 243.84 93.98)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "10fc2271-d5f0-4f40-aa19-8f859ff61836")
-	)
-	(wire
-		(pts
 			(xy 248.92 86.36) (xy 248.92 88.9)
 		)
 		(stroke
@@ -7293,6 +7126,16 @@
 			(type default)
 		)
 		(uuid "148181cd-1a36-47d9-bf2c-b57c5a826fc3")
+	)
+	(wire
+		(pts
+			(xy 243.84 93.98) (xy 243.84 99.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "166bbbcb-1e8a-4f52-ad20-80b762487122")
 	)
 	(wire
 		(pts
@@ -7373,6 +7216,16 @@
 			(type default)
 		)
 		(uuid "2602b909-d3ff-4841-9326-a98c160fcd3d")
+	)
+	(wire
+		(pts
+			(xy 243.84 93.98) (xy 260.35 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2705713e-aa99-4d68-b1ef-6e6bb11a415f")
 	)
 	(wire
 		(pts
@@ -7473,6 +7326,16 @@
 			(type default)
 		)
 		(uuid "3b14f26a-d2da-40b1-89ff-4c76bcd27185")
+	)
+	(wire
+		(pts
+			(xy 236.22 88.9) (xy 248.92 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "3bf3bebe-3411-477a-a365-b23c11a8f982")
 	)
 	(wire
 		(pts
@@ -7706,16 +7569,6 @@
 	)
 	(wire
 		(pts
-			(xy 248.92 88.9) (xy 236.22 88.9)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8b2aba7f-7293-4445-8d68-22fbb92079c3")
-	)
-	(wire
-		(pts
 			(xy 248.92 86.36) (xy 260.35 86.36)
 		)
 		(stroke
@@ -7763,16 +7616,6 @@
 			(type default)
 		)
 		(uuid "9279d883-a9ac-40c5-8692-ac6f0dca4db3")
-	)
-	(wire
-		(pts
-			(xy 248.92 88.9) (xy 248.92 99.06)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "929049ad-156d-46b9-8424-3fec00da4459")
 	)
 	(wire
 		(pts
@@ -7843,16 +7686,6 @@
 			(type default)
 		)
 		(uuid "a1019971-febd-4324-82cb-0ee30e1a5ef1")
-	)
-	(wire
-		(pts
-			(xy 243.84 93.98) (xy 260.35 93.98)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a35b90ce-81ae-40ea-b8de-ef0e89c04312")
 	)
 	(wire
 		(pts
@@ -7946,16 +7779,6 @@
 	)
 	(wire
 		(pts
-			(xy 243.84 93.98) (xy 243.84 99.06)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "baf20cf0-c08c-471c-8d14-c875a59d4f0c")
-	)
-	(wire
-		(pts
 			(xy 101.6 105.41) (xy 104.14 105.41)
 		)
 		(stroke
@@ -7976,6 +7799,16 @@
 	)
 	(wire
 		(pts
+			(xy 248.92 88.9) (xy 248.92 99.06)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bf855d95-9010-4a42-8d34-f2ff065c3c02")
+	)
+	(wire
+		(pts
 			(xy 153.67 86.36) (xy 210.82 86.36)
 		)
 		(stroke
@@ -7983,6 +7816,16 @@
 			(type default)
 		)
 		(uuid "bfcb3647-43df-4e5d-a5c1-e053775030cf")
+	)
+	(wire
+		(pts
+			(xy 236.22 93.98) (xy 243.84 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c4e2ab4e-ff4f-42df-a84f-cc9109ed7379")
 	)
 	(wire
 		(pts
@@ -8124,6 +7967,16 @@
 		)
 		(uuid "01de3c50-5a8a-4e80-8019-673b27bb495a")
 	)
+	(label "CANH"
+		(at 236.22 88.9 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "07156912-b3a5-4036-865c-26aabee5268b")
+	)
 	(label "DEBUG_UART_TX"
 		(at 228.6 154.94 180)
 		(effects
@@ -8174,25 +8027,15 @@
 		)
 		(uuid "a49b370c-5d11-4271-b2ee-4f72e33ec24f")
 	)
-	(label "CANH"
-		(at 243.84 88.9 180)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify right bottom)
-		)
-		(uuid "abcd2cb6-3ae2-4e67-b995-78758d0dde00")
-	)
 	(label "CANL"
-		(at 243.84 93.98 180)
+		(at 236.22 93.98 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
-			(justify right bottom)
+			(justify left bottom)
 		)
-		(uuid "b9df653a-ef80-4aee-ab66-7d7ebaa7bcca")
+		(uuid "c314f55e-57dc-4d8a-a1d0-dfbdf5481135")
 	)
 	(label "CAN_STB"
 		(at 195.58 96.52 0)
@@ -9850,7 +9693,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "30d64631-a450-4177-a87a-cf79659cd528")
 		(property "Reference" "#PWR022"
@@ -10790,6 +10633,103 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "#PWR035")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "AA_Inventree:CAP-0805-0.1uF")
+		(at 19.05 121.92 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp yes)
+		(fields_autoplaced yes)
+		(uuid "51198922-f715-406e-98c6-4e1d2691a1d0")
+		(property "Reference" "C10"
+			(at 22.86 120.6499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 22.86 123.1899 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 20.0152 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 19.05 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 19.05 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "InvenTree" "42"
+			(at 19.05 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/42/"
+			(at 19.05 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "IPN" "CAP-0805-0.1uF"
+			(at 19.05 121.92 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "f91d9480-8281-4a39-bb9b-c93cd39bdfe1")
+		)
+		(pin "1"
+			(uuid "a5d62977-c01f-42ec-a374-3bdb96733d51")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "C10")
 					(unit 1)
 				)
 			)
@@ -13681,7 +13621,7 @@
 				)
 			)
 		)
-		(property "Footprint" "Personal:TC2050_With_Header"
+		(property "Footprint" "Connector:Tag-Connect_TC2050-IDC-NL_2x05_P1.27mm_Vertical"
 			(at 193.04 146.05 0)
 			(effects
 				(font
@@ -14986,102 +14926,6 @@
 			(project ""
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "R4")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "AA_Inventree:CAP-0603-0.1uF_25V")
-		(at 19.05 121.92 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp yes)
-		(uuid "faca174e-f3a6-4ee8-a777-f32152cd2451")
-		(property "Reference" "C10"
-			(at 20.32 119.38 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 20.32 124.714 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0603_1608Metric"
-			(at 20.0152 125.73 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 19.05 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 19.05 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "InvenTree" "80"
-			(at 19.05 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/80/"
-			(at 19.05 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "IPN" "CAP-0603-0.1uF_25V"
-			(at 19.05 121.92 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "02f9f3c2-d050-42bd-b741-0463e3e4467b")
-		)
-		(pin "2"
-			(uuid "52d676f0-4dca-4a81-b3d7-7b410e109ca6")
-		)
-		(instances
-			(project "meter_reader"
-				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
-					(reference "C10")
 					(unit 1)
 				)
 			)
