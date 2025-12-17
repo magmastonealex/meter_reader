@@ -1,0 +1,30 @@
+when:
+  - branch: master
+
+clone:
+  - name: git
+    image: woodpeckerci/plugin-git
+    settings:
+      partial: true
+      path: "repo"
+  - name: git
+    image: woodpeckerci/plugin-git
+    settings:
+      partial: true
+      remote: "https://gitea.home.svcs.alexroth.me/alex/kicadlibs.git"
+      ref: master
+      # by carefully setting the path to "kicadstuff", we can render the "legacy" footprints
+      # by setting AR_PROJECTS_DIR to the CI workspace directory.
+      # or the "new" footprints by setting AR_LIB_DIR to CI workspace + kicadstuff.
+      #export AR_PROJECTS_DIR=/prjstuff/
+      path: "kicadstuff"
+
+steps: 
+  - name: build
+    image: docker.svcs.alexroth.me/kicad_ci:1.0.2
+    environment:
+      GITEA_TOKEN:
+        from_secret: gitea_publish_token
+    commands:
+      - "repo/.ci/tag.sh"
+

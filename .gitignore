@@ -1,0 +1,12 @@
+*.csv
+*.kicad_prl
+*.zip
+jlcout/
+*-backups/
+*.step
+*.lck
+fp-info-cache
+\#auto_saved_files#
+*.3mf
+*.wrl
+3dexport/
