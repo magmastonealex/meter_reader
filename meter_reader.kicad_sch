@@ -5,6 +5,163 @@
 	(uuid "831cbbc0-6453-4319-8c40-1a869c1d0e81")
 	(paper "A4")
 	(lib_symbols
+		(symbol "AA_Inventree:CAP-0402-0.1uF"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 0.254)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "C"
+				(at 0.635 2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Value" "0.1uF"
+				(at 0.635 -2.54 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(justify left)
+				)
+			)
+			(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+				(at 0.9652 -3.81 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "InvenTree" "240"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/240/"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "IPN" "CAP-0402-0.1uF"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Capacitor_SMD:C_0402_1005Metric"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "CAP-0402-0.1uF_0_1"
+				(polyline
+					(pts
+						(xy -2.032 0.762) (xy 2.032 0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -2.032 -0.762) (xy 2.032 -0.762)
+					)
+					(stroke
+						(width 0.508)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "CAP-0402-0.1uF_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 2.794)
+					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "AA_Inventree:CAP-0805-0.1uF"
 			(pin_numbers
 				(hide yes)
@@ -1957,14 +2114,14 @@
 				(pin bidirectional line
 					(at 7.62 1.27 180)
 					(length 2.54)
-					(name "IO3"
+					(name "IO4"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "4"
+					(number "6"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1975,14 +2132,14 @@
 				(pin bidirectional line
 					(at 7.62 -5.08 180)
 					(length 2.54)
-					(name "IO4"
+					(name "IO3"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "6"
+					(number "4"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -5712,24 +5869,6 @@
 			)
 			(symbol "UC-MSPM0G3106-28PIN_0_0"
 				(pin unspecified line
-					(at -15.24 7.62 0)
-					(length 2.54)
-					(name "PA1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin unspecified line
 					(at -15.24 3.81 0)
 					(length 2.54)
 					(name "PA2"
@@ -6020,14 +6159,14 @@
 				(pin unspecified line
 					(at 20.32 -7.62 180)
 					(length 2.54)
-					(name "PA18"
+					(name "PA15"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "21"
+					(number "18"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -6037,24 +6176,6 @@
 				)
 				(pin unspecified line
 					(at 20.32 -11.43 180)
-					(length 2.54)
-					(name "PA17"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "20"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin unspecified line
-					(at 20.32 -15.24 180)
 					(length 2.54)
 					(name "PA16"
 						(effects
@@ -6072,16 +6193,34 @@
 					)
 				)
 				(pin unspecified line
-					(at 20.32 -19.05 180)
+					(at 20.32 -15.24 180)
 					(length 2.54)
-					(name "PA15"
+					(name "PA17"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "18"
+					(number "20"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at 20.32 -19.05 180)
+					(length 2.54)
+					(name "PA18"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "21"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -6129,6 +6268,24 @@
 				)
 				(pin unspecified line
 					(at -15.24 15.24 0)
+					(length 2.54)
+					(name "PA1/MAG_INT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin unspecified line
+					(at -15.24 7.62 0)
 					(length 2.54)
 					(name "PA5/MAG_INT"
 						(effects
@@ -6786,6 +6943,89 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Mechanical:MountingHole"
+			(pin_names
+				(offset 1.016)
+			)
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "H"
+				(at 0 5.08 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "MountingHole"
+				(at 0 3.175 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Mounting Hole without connection"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "mounting hole"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "MountingHole*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "MountingHole_0_1"
+				(circle
+					(center 0 0)
+					(radius 1.27)
+					(stroke
+						(width 1.27)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Personal:Debug_Connector"
 			(exclude_from_sim no)
 			(in_bom yes)
@@ -7025,6 +7265,100 @@
 								(size 1.27 1.27)
 							)
 						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Personal:Touchmark"
+			(exclude_from_sim no)
+			(in_bom no)
+			(on_board yes)
+			(property "Reference" "REF"
+				(at 0 -3.556 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Value" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" "Personal:Touchmark"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "Touchmark_1_0"
+				(polyline
+					(pts
+						(xy -1.1784 0.0371) (xy -0.698 -0.8791) (xy -2.8549 -0.8791) (xy -2.3714 0.0434) (xy -1.1784 0.0371)
+					)
+					(stroke
+						(width -0.0001)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.4747 3.7973) (xy 1.6564 3.7616) (xy 1.8269 3.7159) (xy 1.9866 3.6609) (xy 2.1356 3.5971)
+						(xy 2.2741 3.5251) (xy 2.4022 3.4453) (xy 2.5203 3.3585) (xy 2.6284 3.2651) (xy 2.7268 3.1657)
+						(xy 2.8157 3.0609) (xy 2.8952 2.9512) (xy 2.9657 2.8372) (xy 3.0271 2.7195) (xy 3.0799 2.5985)
+						(xy 3.124 2.475) (xy 3.1598 2.3494) (xy 3.1875 2.2224) (xy 3.2072 2.0944) (xy 3.2191 1.966) (xy 3.2235 1.8378)
+						(xy 3.2204 1.7104) (xy 3.2102 1.5844) (xy 3.193 1.4602) (xy 3.169 1.3384) (xy 3.1383 1.2197) (xy 3.1013 1.1045)
+						(xy 3.0581 0.9935) (xy 3.0088 0.8871) (xy 2.9538 0.7861) (xy 2.8931 0.6908) (xy 2.827 0.602) (xy 2.7556 0.5201)
+						(xy 4.5939 -2.1771) (xy 3.4821 -2.1803) (xy 1.9133 -0.017) (xy 1.9077 -0.0241) (xy 1.8998 -0.0307)
+						(xy 1.8898 -0.0368) (xy 1.8778 -0.0424) (xy 1.8481 -0.0523) (xy 1.8115 -0.0605) (xy 1.7689 -0.0672)
+						(xy 1.721 -0.0726) (xy 1.6688 -0.0767) (xy 1.6131 -0.0798) (xy 1.4942 -0.0837) (xy 1.3709 -0.0853)
+						(xy 1.1381 -0.087) (xy 1.1243 0.8375) (xy 1.5225 0.8471) (xy 1.5797 0.8634) (xy 1.6359 0.8859)
+						(xy 1.6909 0.9144) (xy 1.7444 0.9485) (xy 1.7961 0.9877) (xy 1.8457 1.0319) (xy 1.893 1.0805)
+						(xy 1.9376 1.1334) (xy 1.9792 1.19) (xy 2.0176 1.2502) (xy 2.0526 1.3134) (xy 2.0837 1.3794) (xy 2.1107 1.4478)
+						(xy 2.1334 1.5183) (xy 2.1514 1.5905) (xy 2.1645 1.6641) (xy 2.1723 1.7387) (xy 2.1747 1.814)
+						(xy 2.1712 1.8895) (xy 2.1617 1.9651) (xy 2.1457 2.0402) (xy 2.1232 2.1146) (xy 2.0937 2.188)
+						(xy 2.0569 2.2598) (xy 2.0126 2.3299) (xy 1.9606 2.3979) (xy 1.9004 2.4634) (xy 1.8319 2.526)
+						(xy 1.7547 2.5854) (xy 1.6686 2.6413) (xy 1.5732 2.6933) (xy 1.4684 2.7411) (xy 0.7653 2.7411)
+						(xy 0.7971 -2.1866) (xy -0.2416 -2.1907) (xy -0.2388 -0.9449) (xy -1.7797 2.0221) (xy -3.9346 -2.192)
+						(xy -5.08 -2.201) (xy -4.2865 -0.8219) (xy -1.7924 3.8005) (xy -0.2368 0.9596) (xy -0.224 3.81)
+						(xy 1.4747 3.7973)
+					)
+					(stroke
+						(width -0.0001)
+						(type solid)
+					)
+					(fill
+						(type outline)
 					)
 				)
 			)
@@ -7503,12 +7837,6 @@
 		(uuid "48c069ac-f998-4d1a-a0fa-2583283cd34c")
 	)
 	(junction
-		(at 72.39 93.98)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "530b57b5-0992-4b2d-bfe6-953d1a47c2f6")
-	)
-	(junction
 		(at 143.51 39.37)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7641,12 +7969,12 @@
 		(uuid "f9cd0bfc-21b0-40a8-9eb9-a476013d2906")
 	)
 	(no_connect
-		(at 153.67 101.6)
-		(uuid "4a814aef-941c-4a88-a7a9-82cb38008ab4")
-	)
-	(no_connect
 		(at 153.67 109.22)
 		(uuid "55e78960-1351-41e3-a916-18e2f0955c37")
+	)
+	(no_connect
+		(at 72.39 78.74)
+		(uuid "5a95fd60-dc5a-4e47-8602-c6bfee4df1e1")
 	)
 	(no_connect
 		(at 210.82 93.98)
@@ -7661,8 +7989,8 @@
 		(uuid "8ad5a0aa-8e72-4f92-80db-4f2255f99988")
 	)
 	(no_connect
-		(at 153.67 97.79)
-		(uuid "971cfd0b-f441-4056-97dd-bcfc7329aee9")
+		(at 153.67 101.6)
+		(uuid "8fe3b4c6-023a-4e38-9483-3d17aedefebe")
 	)
 	(no_connect
 		(at 153.67 105.41)
@@ -7942,16 +8270,6 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 78.74) (xy 72.39 93.98)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "2e96bcac-5c9f-4183-b27c-9e2eb30c04f9")
-	)
-	(wire
-		(pts
 			(xy 130.81 76.2) (xy 130.81 64.77)
 		)
 		(stroke
@@ -8159,6 +8477,16 @@
 			(type default)
 		)
 		(uuid "58ee32c1-6bc0-4ba5-a82f-c7c91e2f431e")
+	)
+	(wire
+		(pts
+			(xy 167.64 97.79) (xy 161.29 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "5b6b3820-c4e3-4c2e-bcd3-718a0e144502")
 	)
 	(wire
 		(pts
@@ -8412,6 +8740,16 @@
 	)
 	(wire
 		(pts
+			(xy 175.26 97.79) (xy 179.07 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "99d50004-0551-4003-b032-338a4f135d29")
+	)
+	(wire
+		(pts
 			(xy 57.15 91.44) (xy 77.47 91.44)
 		)
 		(stroke
@@ -8552,6 +8890,16 @@
 	)
 	(wire
 		(pts
+			(xy 99.06 152.4) (xy 99.06 147.32)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b9488a37-0d95-4032-b5ec-ab10c545e800")
+	)
+	(wire
+		(pts
 			(xy 101.6 105.41) (xy 104.14 105.41)
 		)
 		(stroke
@@ -8632,16 +8980,6 @@
 	)
 	(wire
 		(pts
-			(xy 57.15 93.98) (xy 72.39 93.98)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ccb7f30a-611c-468d-b974-3d2865f152ba")
-	)
-	(wire
-		(pts
 			(xy 74.93 78.74) (xy 74.93 88.9)
 		)
 		(stroke
@@ -8712,6 +9050,16 @@
 	)
 	(wire
 		(pts
+			(xy 179.07 97.79) (xy 179.07 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e4170acc-76a4-4bf3-ab10-f8c430704e28")
+	)
+	(wire
+		(pts
 			(xy 77.47 78.74) (xy 77.47 91.44)
 		)
 		(stroke
@@ -8742,7 +9090,7 @@
 	)
 	(wire
 		(pts
-			(xy 72.39 93.98) (xy 118.11 93.98)
+			(xy 57.15 93.98) (xy 118.11 93.98)
 		)
 		(stroke
 			(width 0)
@@ -8800,7 +9148,7 @@
 		)
 		(uuid "01de3c50-5a8a-4e80-8019-673b27bb495a")
 	)
-	(label "CANH"
+	(label "CAN+"
 		(at 236.22 88.9 0)
 		(effects
 			(font
@@ -8920,7 +9268,7 @@
 		)
 		(uuid "b2fdf0d6-b061-49ab-b093-b2f34cb832af")
 	)
-	(label "CANL"
+	(label "CAN-"
 		(at 236.22 93.98 0)
 		(effects
 			(font
@@ -8970,29 +9318,7 @@
 		)
 		(uuid "faff9eda-9ce6-4e32-9fb0-85f19ab832c5")
 	)
-	(global_label "CANH"
-		(shape bidirectional)
-		(at 33.02 41.91 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "0cfce7cd-418e-42ad-9778-67fcc28302e8")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 42.1361 41.91 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
-	(global_label "CANL"
+	(global_label "CAN+"
 		(shape bidirectional)
 		(at 33.02 44.45 0)
 		(fields_autoplaced yes)
@@ -9002,9 +9328,9 @@
 			)
 			(justify left)
 		)
-		(uuid "64cd8546-ab05-4cb5-b0bd-2e9f846a5f4b")
+		(uuid "79bba1d3-b284-4086-bdee-ffede767f0e5")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 41.8337 44.45 0)
+			(at 42.378 44.45 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9014,7 +9340,7 @@
 			)
 		)
 	)
-	(global_label "CANL"
+	(global_label "CAN-"
 		(shape bidirectional)
 		(at 273.05 93.98 0)
 		(fields_autoplaced yes)
@@ -9026,7 +9352,7 @@
 		)
 		(uuid "d31b7d1f-dafe-4164-84bd-0090885c67a0")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 281.8637 93.98 0)
+			(at 282.408 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9036,7 +9362,29 @@
 			)
 		)
 	)
-	(global_label "CANH"
+	(global_label "CAN-"
+		(shape bidirectional)
+		(at 33.02 41.91 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "e2bc0492-d504-47b1-8fd5-37623eeecef3")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 42.378 41.91 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "CAN+"
 		(shape bidirectional)
 		(at 273.05 86.36 0)
 		(fields_autoplaced yes)
@@ -9048,7 +9396,7 @@
 		)
 		(uuid "ed2167b9-76d9-47a1-a3c2-e64be56ca584")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 282.1661 86.36 0)
+			(at 282.408 86.36 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9330,7 +9678,7 @@
 			(uuid "516f6dd4-8ba6-4eb5-8363-238ec02f6821")
 		)
 		(instances
-			(project ""
+			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "D4")
 					(unit 1)
@@ -9569,103 +9917,6 @@
 		)
 	)
 	(symbol
-		(lib_id "AA_Inventree:CAP-0805-0.1uF")
-		(at 35.56 77.47 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "10b3a284-4652-4e30-a6f7-268f1823cfc7")
-		(property "Reference" "C9"
-			(at 39.37 76.1999 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 39.37 78.7399 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
-			(at 36.5252 81.28 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 35.56 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 35.56 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "InvenTree" "42"
-			(at 35.56 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/42/"
-			(at 35.56 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "IPN" "CAP-0805-0.1uF"
-			(at 35.56 77.47 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "ffec567c-0e83-49d3-a88c-1092dffde383")
-		)
-		(pin "1"
-			(uuid "f6d6bfa1-48fa-4529-9bed-bd02dbd1341c")
-		)
-		(instances
-			(project "meter_reader"
-				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
-					(reference "C9")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:GND")
 		(at 144.78 71.12 0)
 		(mirror y)
@@ -9728,73 +9979,6 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "#PWR034")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:GND")
-		(at 99.06 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "178f0790-1173-43bd-b56f-cc3bae298045")
-		(property "Reference" "#PWR024"
-			(at 99.06 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 99.06 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 99.06 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 99.06 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 99.06 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "249b65b0-2fb1-49ef-9a35-bda56eabc3f1")
-		)
-		(instances
-			(project "meter_reader"
-				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
-					(reference "#PWR024")
 					(unit 1)
 				)
 			)
@@ -10841,73 +11025,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:GND")
-		(at 106.68 154.94 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "3f842c99-764c-42cd-9c79-b42b621c377a")
-		(property "Reference" "#PWR025"
-			(at 106.68 161.29 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "GND"
-			(at 106.68 160.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Footprint" ""
-			(at 106.68 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 106.68 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 106.68 154.94 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "76cd7996-0dd5-49cd-a2cc-2fb4f7028ba5")
-		)
-		(instances
-			(project "meter_reader"
-				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
-					(reference "#PWR025")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "AA_Inventree:CPR-TVS-UNI-12V")
 		(at 59.69 43.18 270)
 		(unit 1)
@@ -11465,6 +11582,74 @@
 	)
 	(symbol
 		(lib_id "power:GND")
+		(at 99.06 160.02 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "4f6fbfeb-cb4a-4be1-8f63-e6a280a27b5c")
+		(property "Reference" "#PWR025"
+			(at 99.06 166.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 99.06 165.1 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 99.06 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 99.06 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 99.06 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "b5c4680e-2b89-4c12-8021-f5b3a766a9f7")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "#PWR025")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
 		(at 118.11 72.39 0)
 		(mirror y)
 		(unit 1)
@@ -11623,6 +11808,103 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "C10")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "AA_Inventree:CAP-0402-0.1uF")
+		(at 35.56 77.47 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "538b8894-9736-4f79-be34-fdde19ac84d1")
+		(property "Reference" "C9"
+			(at 39.37 76.1999 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 39.37 78.7399 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 34.5948 73.66 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 35.56 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 35.56 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "InvenTree" "240"
+			(at 35.56 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/240/"
+			(at 35.56 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "IPN" "CAP-0402-0.1uF"
+			(at 35.56 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "4620402b-8c35-4379-ade0-bfcd9d39d7cb")
+		)
+		(pin "1"
+			(uuid "6f3a84bd-33cc-4cd5-ab3c-b4daab9f6d29")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "C9")
 					(unit 1)
 				)
 			)
@@ -12606,16 +12888,15 @@
 	)
 	(symbol
 		(lib_id "AA_Inventree:RES-0805-1K")
-		(at 106.68 151.13 0)
+		(at 171.45 97.79 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "7412e99f-34c3-4d06-adf1-1b2b7b1eb340")
 		(property "Reference" "R7"
-			(at 109.22 149.8599 0)
+			(at 167.64 96.774 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12624,7 +12905,7 @@
 			)
 		)
 		(property "Value" "1K"
-			(at 109.22 152.3999 0)
+			(at 175.514 95.504 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12633,7 +12914,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
-			(at 107.696 151.384 90)
+			(at 171.704 96.774 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12642,7 +12923,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 106.68 151.13 0)
+			(at 171.45 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12651,7 +12932,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 106.68 151.13 0)
+			(at 171.45 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12660,7 +12941,7 @@
 			)
 		)
 		(property "InvenTree" "15"
-			(at 106.68 151.13 0)
+			(at 171.45 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12669,7 +12950,7 @@
 			)
 		)
 		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/15/"
-			(at 106.68 151.13 0)
+			(at 171.45 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12678,7 +12959,7 @@
 			)
 		)
 		(property "IPN" "RES-0805-1K"
-			(at 106.68 151.13 0)
+			(at 171.45 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -12999,16 +13280,15 @@
 	)
 	(symbol
 		(lib_id "AA_Inventree:RES-0805-1K")
-		(at 99.06 151.13 0)
+		(at 99.06 156.21 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "7d840de3-431f-4a72-9725-4289a31854bb")
 		(property "Reference" "R6"
-			(at 101.6 149.8599 0)
+			(at 93.726 154.178 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13017,7 +13297,7 @@
 			)
 		)
 		(property "Value" "1K"
-			(at 101.6 152.3999 0)
+			(at 93.98 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13026,7 +13306,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
-			(at 100.076 151.384 90)
+			(at 100.076 156.464 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13035,7 +13315,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 99.06 151.13 0)
+			(at 99.06 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13044,7 +13324,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 99.06 151.13 0)
+			(at 99.06 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13053,7 +13333,7 @@
 			)
 		)
 		(property "InvenTree" "15"
-			(at 99.06 151.13 0)
+			(at 99.06 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13062,7 +13342,7 @@
 			)
 		)
 		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/15/"
-			(at 99.06 151.13 0)
+			(at 99.06 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13071,7 +13351,7 @@
 			)
 		)
 		(property "IPN" "RES-0805-1K"
-			(at 99.06 151.13 0)
+			(at 99.06 156.21 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -13086,7 +13366,7 @@
 			(uuid "9b7f8a01-6bcb-480e-894d-016450a4fec8")
 		)
 		(instances
-			(project ""
+			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "R6")
 					(unit 1)
@@ -13823,6 +14103,70 @@
 		)
 	)
 	(symbol
+		(lib_id "Mechanical:MountingHole")
+		(at 262.89 172.72 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "96cd022c-585b-4fb7-ab33-703ed770b264")
+		(property "Reference" "H1"
+			(at 265.43 171.4499 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "MountingHole"
+			(at 265.43 173.9899 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "MountingHole:MountingHole_2.2mm_M2"
+			(at 262.89 172.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 262.89 172.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 262.89 172.72 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(instances
+			(project ""
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "H1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "AA_Inventree:IND-SMD-2.2uH-2A")
 		(at 101.6 39.37 90)
 		(unit 1)
@@ -13912,6 +14256,74 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "L2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 179.07 102.87 0)
+		(mirror y)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "99fbefa0-aaff-465a-9847-60453e9893b8")
+		(property "Reference" "#PWR024"
+			(at 179.07 109.22 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 179.07 107.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Footprint" ""
+			(at 179.07 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 179.07 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 179.07 102.87 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "161cb007-26e3-4b5e-b0d1-840f0a963846")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "#PWR024")
 					(unit 1)
 				)
 			)
@@ -14513,101 +14925,6 @@
 		)
 	)
 	(symbol
-		(lib_id "AA_Inventree:CAP-0805-0.1uF")
-		(at 181.61 39.37 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "ba9dcece-b0e2-4935-a6de-e5d2b909adf9")
-		(property "Reference" "C1"
-			(at 181.61 31.75 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "0.1uF"
-			(at 181.61 34.29 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
-			(at 185.42 38.4048 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 181.61 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 181.61 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "InvenTree" "42"
-			(at 181.61 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/42/"
-			(at 181.61 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "IPN" "CAP-0805-0.1uF"
-			(at 181.61 39.37 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "1559f669-0edd-4289-be8a-b57f7166e03a")
-		)
-		(pin "1"
-			(uuid "f1d434ca-5f6c-415c-82ac-c9b8350cbbd6")
-		)
-		(instances
-			(project ""
-				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
-					(reference "C1")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+3V3")
 		(at 223.52 77.47 0)
 		(mirror y)
@@ -15090,6 +15407,70 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "#PWR044")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Personal:Touchmark")
+		(at 189.23 173.99 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c8c95ab7-3eee-4413-be9f-579992936e56")
+		(property "Reference" "REF1"
+			(at 189.23 177.546 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "~"
+			(at 195.58 173.1854 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Personal:Touchmark_small"
+			(at 189.23 173.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 189.23 173.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 189.23 173.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(instances
+			(project ""
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "REF1")
 					(unit 1)
 				)
 			)
@@ -15627,7 +16008,7 @@
 	)
 	(symbol
 		(lib_id "AA_Inventree:LED-0805-GREEN")
-		(at 106.68 143.51 90)
+		(at 157.48 97.79 180)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -15635,7 +16016,7 @@
 		(dnp no)
 		(uuid "e35aaa20-dbbe-421a-97f1-83026a5a2ca6")
 		(property "Reference" "D3"
-			(at 110.49 140.716 90)
+			(at 152.908 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15644,7 +16025,7 @@
 			)
 		)
 		(property "Value" "GREEN"
-			(at 110.49 143.256 90)
+			(at 157.226 93.98 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15653,7 +16034,7 @@
 			)
 		)
 		(property "Footprint" "LED_SMD:LED_0805_2012Metric_Pad1.15x1.40mm_HandSolder"
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15662,7 +16043,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15671,7 +16052,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15680,7 +16061,7 @@
 			)
 		)
 		(property "Sim.Pins" "1=K 2=A"
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15689,7 +16070,7 @@
 			)
 		)
 		(property "InvenTree" "48"
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15698,7 +16079,7 @@
 			)
 		)
 		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/48/"
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15707,7 +16088,7 @@
 			)
 		)
 		(property "IPN" "LED-0805-GREEN"
-			(at 106.68 143.51 0)
+			(at 157.48 97.79 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15859,6 +16240,101 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "#PWR011")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "AA_Inventree:CAP-0402-0.1uF")
+		(at 181.61 39.37 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e9c5fe2c-7876-49d9-bc16-bf575ede97d0")
+		(property "Reference" "C1"
+			(at 181.61 31.75 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "0.1uF"
+			(at 181.61 34.29 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
+			(at 185.42 38.4048 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 181.61 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 181.61 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "InvenTree" "240"
+			(at 181.61 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/240/"
+			(at 181.61 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "IPN" "CAP-0402-0.1uF"
+			(at 181.61 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "9d176fae-de86-4035-8189-8407458134f4")
+		)
+		(pin "1"
+			(uuid "b126a8af-71f9-4c91-ae7f-da7e874b4352")
+		)
+		(instances
+			(project ""
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "C1")
 					(unit 1)
 				)
 			)
