@@ -219,6 +219,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "defmt-rtt"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93d5a25c99d89c40f5676bec8cefe0614f17f0f40e916f98e345dae941807f9e"
+dependencies = [
+ "critical-section",
+ "defmt 1.0.1",
+]
+
+[[package]]
 name = "defmt-test"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -358,6 +368,7 @@ source = "git+https://github.com/embassy-rs/embassy?rev=62ed44f99af9e33d689c8308
 dependencies = [
  "cfg-if",
  "critical-section",
+ "defmt 1.0.1",
  "document-features",
  "embassy-time-driver",
  "embedded-hal 0.2.7",
@@ -608,12 +619,18 @@ version = "0.1.0"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
+ "defmt 1.0.1",
+ "defmt-rtt",
  "defmt-test",
  "embassy-executor",
  "embassy-mspm0",
  "embassy-sync",
  "embassy-time",
  "embedded-hal 1.0.0",
+ "embedded-hal-async",
+ "embedded-hal-nb",
+ "embedded-io",
+ "embedded-io-async",
  "panic-probe",
  "semihosting",
 ]
