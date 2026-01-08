@@ -2,16 +2,17 @@
 #![no_std]
 
 use cortex_m::{asm::nop};
+use embassy_mspm0::gpio::Input;
 use embassy_mspm0::{Config, gpio::Output};
 
 use embassy_mspm0::{Peri, bind_interrupts};
 use embassy_mspm0::i2c::{self};
-use embassy_mspm0::peripherals::I2C0;
+use embassy_mspm0::peripherals::I2C1;
 
 use embassy_mspm0::uart::{self, UartTx};
 use embassy_mspm0::peripherals::UART0;
 
-use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
+use embedded_hal::i2c::{I2c, ErrorKind, Error as I2cError};
 use embedded_io_async::Write;
 
 use embassy_executor::Spawner;
@@ -32,7 +33,7 @@ pub fn exit() -> ! {
 }
 
 bind_interrupts!(struct Irqs {
-    I2C0 => i2c::InterruptHandler<I2C0>;
+    I2C1 => i2c::InterruptHandler<I2C1>;
 });
 
 /// Hardfault handler.
@@ -56,7 +57,7 @@ where
     
     for addr in 0x01..0x7F {
         let mut tmp = [0u8; 1];
-        match i2c.read(addr, &mut tmp).await {
+        match i2c.read(addr, &mut tmp) {
             Ok(_) => {
                 defmt::info!("Found device at address: {=u8:#04x}", addr);
             }
@@ -75,21 +76,23 @@ where
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
     let periph = embassy_mspm0::init(Default::default());
-    let mut led_output = Output::new(periph.PA22, embassy_mspm0::gpio::Level::Low);
+    let mut led_output = Output::new(periph.PA25, embassy_mspm0::gpio::Level::Low);
+    let mut led_output_2 = Output::new(periph.PA10, embassy_mspm0::gpio::Level::High);
+
+    let mut s2 = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
     
-    let tx = periph.PA27;
+    let tx = periph.PA21;
 
     let mut config = embassy_mspm0::uart::Config::default();
     config.baudrate = 115200;
 
-
     //let mut uart = Uart::new_blocking(periph.UART0, rx, tx, config).unwrap();
-    let mut uart = UartTx::new_blocking(periph.UART0, tx, config).unwrap();
+    let mut uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
 
     info!("Init completed");
     embassy_time::Timer::after(Duration::from_millis(100)).await;  
 
-    let mut i2cinter = i2c::I2c::new_async(periph.I2C0, periph.PA11, periph.PA0, Irqs, i2c::Config::default()).unwrap();
+    let mut i2cinter = i2c::I2c::new_blocking(periph.I2C1, periph.PA4, periph.PA3, i2c::Config::default()).unwrap();
 
     info!("was OK");
     
@@ -97,6 +100,10 @@ async fn main(_spawner: Spawner) -> ! {
 
     loop {
         led_output.toggle();
+        if s2.is_low() {
+            led_output_2.toggle();
+        }
+        
 
         uart.blocking_write(b"ab\r\n").unwrap();
 

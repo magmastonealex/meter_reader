@@ -1,6 +1,6 @@
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 # TODO(2) replace `$CHIP` with your chip's name (see `probe-rs chip list` output)
-runner = ["probe-rs", "run", "--chip", "MSPM0C1104", "--log-format=oneline"]
+runner = ["probe-rs", "run", "--chip", "MSPM0G3107", "--log-format=oneline"]
 # If you have an nRF52, you might also want to add "--allow-erase-all" to the list
 
 rustflags = [

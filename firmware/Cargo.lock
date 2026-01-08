@@ -607,7 +607,6 @@ checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 [[package]]
 name = "mspm0-metapac"
 version = "0.0.1"
-source = "git+https://github.com/mspm0-rs/mspm0-data-generated/?tag=mspm0-data-e91edd86813aa94cbb6737d34e4f1d22b8487cb6#f42789cb345bfeabc0ddaa83fedb8178cce68de7"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
