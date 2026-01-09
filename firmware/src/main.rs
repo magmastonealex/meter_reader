@@ -81,6 +81,8 @@ where
 #[derive(defmt::Format)]
 pub enum CanError {
     ClockNotComingUp,
+    CANNotRespondingReset,
+    CANNotRespondingMem,
     CANNotResponding
 }
 
@@ -150,6 +152,19 @@ fn do_can_stuff() -> Result<(), CanError> {
     });
     cortex_m::asm::delay(16);
 
+    /*
+        //Performing this reset seems to lock up the peripheral - it will never complete memory initialization and all values will read as zeros.
+        can.rstctl().write(|w| {
+            w.set_resetstkyclr(true);
+            w.set_resetassert(true);
+            w.set_key(CanVals::ResetKey::KEY);
+        });*/
+    
+
+    can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_ctrl().modify(|w| {
+        w.set_dbgsusp_free(true);
+    });
+
     can.ti_wrapper(0).msp(0).subsys_clken().write(|w| {
         w.set_clk_reqen(true);
     });
@@ -157,11 +172,20 @@ fn do_can_stuff() -> Result<(), CanError> {
     SYSCTL.genclkcfg().modify(|w| {
         w.set_canclksrc(embassy_mspm0::pac::sysctl::vals::Canclksrc::HFCLK);
     });
+    
+    cnt = 0;
+    while can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_stat().read().reset() {
+        if cnt > 10000 {
+            return Err(CanError::CANNotRespondingReset);
+        }
+        cnt += 1;
+        cortex_m::asm::delay(9000);
+    }
 
     cnt = 0;
     while !can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_stat().read().mem_init_done() {
         if cnt > 10000 {
-            return Err(CanError::CANNotResponding);
+            return Err(CanError::CANNotRespondingMem);
         }
         cnt += 1;
         cortex_m::asm::delay(9000);
