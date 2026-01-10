@@ -7766,6 +7766,39 @@
 		)
 		(uuid "38cd2070-55fe-4998-a7fc-2dfcd72f6017")
 	)
+	(text "Testing shows external oscillator definitely required for\nCAN accuracy at higher bitrates."
+		(exclude_from_sim no)
+		(at 43.18 149.86 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 255 6 19 1)
+			)
+		)
+		(uuid "4d16885b-0269-46fe-9b81-3b0091f7feb2")
+	)
+	(text "CAN_STB must be set LOW by software to activate\nthe transciver. This was known at design time,\nbut forgotten about by software development time :)"
+		(exclude_from_sim no)
+		(at 187.706 79.248 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 255 6 19 1)
+			)
+		)
+		(uuid "52773316-5a77-441d-8cb2-7448f03953a1")
+	)
+	(text "R2. MLX90394 will use either INTB or SDA\nfor data. The other needs a continuous pull-up.\n\nThis can be worked around in software, though I\nfear it may not be totally reliable.\n"
+		(exclude_from_sim no)
+		(at 84.074 99.822 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(color 255 0 3 1)
+			)
+		)
+		(uuid "52f0aecb-43cb-4d2b-ae16-05ea6915a1ea")
+	)
 	(text "For future expansion."
 		(exclude_from_sim no)
 		(at 79.502 71.374 0)
@@ -7938,6 +7971,12 @@
 		(uuid "c442433e-080c-4ec2-acbe-f9a55d6a6605")
 	)
 	(junction
+		(at 90.17 88.9)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "cc64ac9a-bc93-472b-8a2f-968958987408")
+	)
+	(junction
 		(at 77.47 91.44)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -7954,6 +7993,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d1d74ddd-399c-4bf7-ae96-aa7e6418e241")
+	)
+	(junction
+		(at 90.17 93.98)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d200b666-3872-44d7-8b36-cf6a1fbe4d49")
 	)
 	(junction
 		(at 175.26 149.86)
@@ -8172,6 +8217,16 @@
 			(type default)
 		)
 		(uuid "1adad2b4-c221-48f6-afc3-6bd574884f92")
+	)
+	(wire
+		(pts
+			(xy 93.98 81.28) (xy 90.17 81.28)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "1e22ebb5-4238-4372-bc82-5d6983a82a38")
 	)
 	(wire
 		(pts
@@ -8422,6 +8477,16 @@
 			(type default)
 		)
 		(uuid "3fac9989-47ac-4232-bdf2-91288b10782f")
+	)
+	(wire
+		(pts
+			(xy 90.17 93.98) (xy 118.11 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "40359698-9346-4382-8bb5-66d3ceba80dc")
 	)
 	(polyline
 		(pts
@@ -8735,6 +8800,16 @@
 	)
 	(wire
 		(pts
+			(xy 90.17 88.9) (xy 102.87 88.9)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "93110cd7-c57a-48a8-b5b8-349ac919eb07")
+	)
+	(wire
+		(pts
 			(xy 186.69 40.64) (xy 196.85 40.64)
 		)
 		(stroke
@@ -8935,6 +9010,16 @@
 	)
 	(wire
 		(pts
+			(xy 90.17 88.9) (xy 90.17 93.98)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bb72951e-8963-49a0-853e-ccbf27b4991c")
+	)
+	(wire
+		(pts
 			(xy 101.6 105.41) (xy 104.14 105.41)
 		)
 		(stroke
@@ -9105,7 +9190,7 @@
 	)
 	(wire
 		(pts
-			(xy 74.93 88.9) (xy 102.87 88.9)
+			(xy 74.93 88.9) (xy 90.17 88.9)
 		)
 		(stroke
 			(width 0)
@@ -9125,7 +9210,7 @@
 	)
 	(wire
 		(pts
-			(xy 57.15 93.98) (xy 118.11 93.98)
+			(xy 57.15 93.98) (xy 90.17 93.98)
 		)
 		(stroke
 			(width 0)
@@ -14861,6 +14946,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+3V3")
+		(at 93.98 81.28 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "afdf5a73-86d6-40a9-bde8-444e2f431f34")
+		(property "Reference" "#PWR046"
+			(at 93.98 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 93.98 76.2 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 93.98 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 93.98 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+3V3\""
+			(at 93.98 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "49b2faa4-499e-4a1d-b91c-ae5ac98d20b5")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "#PWR046")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "AA_Inventree:CAP-1206-4.7uF-50V")
 		(at 91.44 29.21 0)
 		(unit 1)
@@ -16599,6 +16750,103 @@
 			(project "meter_reader"
 				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
 					(reference "#PWR06")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "AA_Inventree:RES-0805-4K7")
+		(at 90.17 85.09 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f0e0c5a1-7995-4147-b32c-3b455a397379")
+		(property "Reference" "R10"
+			(at 92.71 83.8199 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "4K7"
+			(at 92.71 86.3599 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
+			(at 89.154 84.836 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 90.17 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 90.17 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "InvenTree" "14"
+			(at 90.17 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part URL" "http://inventree.home.svcs.alexroth.me/part/14/"
+			(at 90.17 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "IPN" "RES-0805-4K7"
+			(at 90.17 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "6b3f4a6a-176f-4cc1-a97b-580109e9b6fa")
+		)
+		(pin "1"
+			(uuid "45622025-91bd-45c7-bef0-69bf72133176")
+		)
+		(instances
+			(project "meter_reader"
+				(path "/831cbbc0-6453-4319-8c40-1a869c1d0e81"
+					(reference "R10")
 					(unit 1)
 				)
 			)
