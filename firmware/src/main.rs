@@ -27,8 +27,9 @@ use embassy_executor::Spawner;
 
 use embassy_time::{Duration};
 
-// TODO(5) adjust HAL import
-// use some_hal as _; // memory layout
+use embassy_mspm0::pac::{CANFD0, IOMUX, SYSCTL};
+use bitbybit::{bitenum, bitfield};
+
 
 use defmt::{info, warn, error};
 
@@ -117,6 +118,8 @@ where
     defmt::info!("I2C Scan complete.");
 }
 
+/* Bosch MCAN Message RAM definitions - artisinal, hand-crafted, and super-duper hacky! */
+
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[derive(defmt::Format)]
 pub enum CanError {
@@ -125,13 +128,6 @@ pub enum CanError {
     CANNotRespondingMem,
     CANNotResponding
 }
-
-use embassy_mspm0::pac::{CANFD0, IOMUX, SYSCTL};
-
-// Best guess is that the CAN message RAM starts at the very beginning of the PERIPHERALREAGION.
-// TI SDK seems to deference the peripheral base address, and the structure leaves a 6144 bytes (6KiB exactly) buffer in front.
-// Our device seems to have a 1K SRAM there.
-use bitbybit::{bitenum, bitfield};
 
 #[bitenum(u2, exhaustive = true)]
 enum StandardFilterType {
@@ -318,7 +314,9 @@ struct McanTXEventEntry {
 
 // it would be nice if these could be generic across the various sizing dimensions, especially because you could enforce accuracy at compile time,
 // but derive-mmio can't do this - so we fix the array sizes.
-// I think this lives at 1079017472 = 0x40508000.
+// It's undocumented by TI, but the message RAM lives at the beginning
+// of the stated peripheral area in the memory map.
+// This lives at 1079017472 = 0x40508000 on MSPM0G310x.
 #[derive(Mmio)]
 #[repr(C)]
 struct McanMessageRAM {
@@ -381,19 +379,13 @@ impl McanMessageRAM {
     };
 }
 
-// We know this all works from C - EXCEPT for hfclkgood, which seemingly is always 0.
-// Getting CAN revision data should also work and works fine from C.
-// Is the SVD wrong, or are we doing something weird?
-// Let's try the SVD in GDB and see what happens.
-
-// svd/b SYSCTL SYSCTL_CLKSTATUS shows HFCLKGOOD = true???
+// Hacky, awful code to test out the MCAN peripheral.
+// This is clearly a small wrapper from TI around the Bosch MCAN IP.
 fn do_can_stuff() -> Result<(), CanError> {
 
     // Hack: Set up HFXT with the 25MHz oscillator
     // We'll use this for clocking the CAN peripheral
-    // sure hope it works!
-    // PINCM is PINCM -1 for some reason????
-    // PA6 - PINCMx 11. Pin function 6 is HFCLK_IN.
+    // PA6 - PINCM11. Pin function 6 is HFCLK_IN.
     IOMUX.pincm(10).modify(|w| {
         w.set_pf(6);
         w.set_inena(true);
@@ -412,18 +404,8 @@ fn do_can_stuff() -> Result<(), CanError> {
         cortex_m::asm::delay(1000);
     }
 
-    // MCAN status?
     info!("MCAN status? {:x}", SYSCTL.sysstatus().read().mcan0ready());
     info!("clk status? {:x}", SYSCTL.clkstatus().read().hfclkgood());
-
-
-    // "HFXT" is now working, and can be used as the async clock for CAN.
-    // This appears to be the default state.
-    //SYSCTL.genclkcfg().write(|w| {
-    //    w.set_canclksrc(embassy_mspm0::pac::sysctl::vals::Canclksrc::HFCLK);
-    //});
-    //DL_GPIO_initPeripheralInputFunction(GPIO_HFCLKIN_IOMUX, GPIO_HFCLKIN_IOMUX_FUNC);
-    //
 
     // Connect CAN_RX (PA27, PINCM60, PF 6, input.)
     IOMUX.pincm(59).modify(|w| {
@@ -446,18 +428,23 @@ fn do_can_stuff() -> Result<(), CanError> {
     cortex_m::asm::delay(16);
 
     /*
-        //Performing this reset seems to lock up the peripheral - it will never complete memory initialization and all values will read as zeros.
+        // Performing this reset seems to lock up the peripheral - it will never complete memory initialization and all values will read as zeros.
+        // It also seems to mess with the peripheral bus, as i2c seems to misbehave... avoid doing this right now.
+        // I don't see any errata, but TI's examples don't seem to ever reset it?
         can.rstctl().write(|w| {
             w.set_resetstkyclr(true);
             w.set_resetassert(true);
             w.set_key(CanVals::ResetKey::KEY);
-        });*/
+        });
+    */
     
-
+    // Allow the peripheral to keep running in debug halt mode.
     can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_ctrl().modify(|w| {
         w.set_dbgsusp_free(true);
     });
 
+    // this is NOT in the reference manual, but to get the peripheral to work,
+    // you need to set a clock request for the peripheral in the "wrapper" around Bosch's MCAN IP.
     can.ti_wrapper(0).msp(0).subsys_clken().write(|w| {
         w.set_clk_reqen(true);
     });
@@ -484,7 +471,6 @@ fn do_can_stuff() -> Result<(), CanError> {
         cortex_m::asm::delay(9000);
     }
     
-
     info!("MCAN status? {:x}", SYSCTL.sysstatus().read().mcan0ready());
     info!("CAN module data: {:x}", can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_pid().read().scheme());
     info!("CAN module data: {:x}", can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_pid().read().module_id());
@@ -533,29 +519,13 @@ fn do_can_stuff() -> Result<(), CanError> {
     });
 
     // Set nominal bit timing.
+    // I grabbed this from CCS SysConfig based on a 25MHz input clock.
+    // At some point, calculate this properly.
 
-    // We have a 25MHz clock coming in. (40ns)
-    // We have a target bitrate of 100 kbit/second (10uS = 10000ns)
-    // We desire ~16 tq, but can tolerate more for now
-    // (will tune using PLL later.)
-    // let's say a prescaler of 10 gives us a can clock of 2.5MHz (400ns)
-    // 400ns * 25 tq = 10000ns
-    // so that leaves us with 25 tq per bit at 100kbit/second.
-    // seg1 = 21, seg2 = 3 = sample point 88% (close enough to 87.5 for our work)
-    
-    // sjw = 2, consider bumping to 3.
-    /*can.mcan(0).nbtp().write(|w| {
-        w.set_nbrp(10-1);
-
-        w.set_ntseg1(21-1); // per docs, 1 more than the programmed value is used.
-        w.set_ntseg2(3-2);
-
-        w.set_nsjw(2-1);
-    });*/
     can.mcan(0).nbtp().write(|w| {
         w.set_nbrp(0);
 
-        w.set_ntseg1(218); // per docs, 1 more than the programmed value is used.
+        w.set_ntseg1(218);
         w.set_ntseg2(29);
 
         w.set_nsjw(29);
@@ -599,6 +569,7 @@ fn do_can_stuff() -> Result<(), CanError> {
     can.mcan(0).rxbc().write(|w| {
         w.set_rbsa(McanMessageRAM::OFFSETS.rxbuffers as u16);
     });
+    // Sizes for various RX elements.
     can.mcan(0).rxesc().write(|w| {
         w.set_rbds(0);
         w.set_f1ds(0);
@@ -648,8 +619,6 @@ fn do_can_stuff() -> Result<(), CanError> {
         cnt += 1;
         cortex_m::asm::delay(1000);
     }
-
-    // This should be enough to at least get acks?
 
     Ok(())
 }
@@ -708,8 +677,8 @@ async fn main(_spawner: Spawner) -> ! {
         //uart.blocking_write(b"abcd1334\r\n").unwrap();
         let ecr = embassy_mspm0::pac::CANFD0.mcan(0).ecr().read();
         let psr = embassy_mspm0::pac::CANFD0.mcan(0).psr().read();
-        //info!("testing: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
-        //info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
+        info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
+        info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
         embassy_time::Timer::after(Duration::from_millis(100)).await;
 
         let fs = embassy_mspm0::pac::CANFD0.mcan(0).rxf0s().read();
