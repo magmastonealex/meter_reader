@@ -367,6 +367,7 @@ source = "git+https://github.com/embassy-rs/embassy?rev=62ed44f99af9e33d689c8308
 dependencies = [
  "cortex-m",
  "critical-section",
+ "defmt 1.0.1",
  "num-traits",
 ]
 
@@ -675,6 +676,7 @@ dependencies = [
  "defmt-test",
  "derive-mmio",
  "embassy-executor",
+ "embassy-hal-internal",
  "embassy-mspm0",
  "embassy-sync",
  "embassy-time",

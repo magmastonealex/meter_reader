@@ -9,6 +9,8 @@ use arbitrary_int::{u2, u4, u5, u7, u11, u29};
 use cortex_m::{asm::nop};
 use derive_mmio::Mmio;
 use embassy_mspm0::gpio::Input;
+use embassy_mspm0::interrupt::{self, InterruptExt};
+use embassy_mspm0::interrupt::typelevel::Interrupt;
 use embassy_mspm0::pac::canfd::{Canfd, vals as CanVals};
 use embassy_mspm0::pac::sysctl::regs::{Syspllparam0, Syspllparam1};
 use embassy_mspm0::{Config, gpio::Output};
@@ -20,14 +22,14 @@ use embassy_mspm0::peripherals::I2C1;
 use embassy_mspm0::uart::{self, UartTx};
 use embassy_mspm0::peripherals::UART0;
 
-use embedded_hal::i2c::{I2c, ErrorKind, Error as I2cError};
+use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
 use embedded_io_async::Write;
 
 use embassy_executor::Spawner;
 
 use embassy_time::{Duration};
 
-use embassy_mspm0::pac::{CANFD0, IOMUX, SYSCTL};
+use embassy_mspm0::pac::{IOMUX, SYSCTL};
 use bitbybit::{bitenum, bitfield};
 
 
@@ -36,7 +38,50 @@ use defmt::{info, warn, error};
 use defmt_rtt as _;
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
+    CANFD0 => CanInterruptHandler;
 });
+
+mod cancontroller;
+
+struct CanInterruptHandler;
+
+impl interrupt::typelevel::Handler<interrupt::typelevel::CANFD0> for CanInterruptHandler {
+    unsafe fn on_interrupt() {
+        // interrupt from CANFD - why?
+        let mis = embassy_mspm0::pac::CANFD0.ti_wrapper(0).msp(0).cpu_int(0).mis().read();
+
+        if mis.intl0() {
+            info!("int line 0");
+            // int lines in MCAN to trigger interrupts seem edge sensitive - if you don't clear it so the line goes back to 0, you won't get another interrupt.
+            embassy_mspm0::pac::CANFD0.mcan(0).ir().write(|w| {
+                w.0 = 0xFFFF_FFFF;
+            });
+        }
+
+        embassy_mspm0::pac::GPIOA.douttgl31_0().write(|w| {
+            w.set_dio(10, true);
+        });
+
+        embassy_mspm0::pac::CANFD0.ti_wrapper(0).msp(0).cpu_int(0).iclr().write(|w| {
+            w.set_wakeup(mis.wakeup());
+            w.set_ext_ts_cntr_ovfl(mis.ext_ts_cntr_ovfl());
+            w.set_ded(mis.ded());
+            w.set_sec(mis.sec());
+            w.set_intl0(mis.intl0());
+            w.set_intl1(mis.intl1());
+        });
+
+        // I think we need to do this same thing for _all_ interrupt types for CANFD that we mask, or we can wind up in a loop.
+
+        // note the ECC stuff is a separate register but comes to the same ISR - see "26.4.14.4 ECC Interrupts"
+        //embassy_mspm0::pac::CANFD0.ti_wrapper(0).processors(0).ecc_regs(0).err_sec_eoi();
+
+        embassy_mspm0::pac::CANFD0.ti_wrapper(0).processors(0).subsys_regs(0).subsys_eoi().write(|w| {
+            w.set_eoi(0x01);
+        });
+
+    }
+}
 
 fn uart_ll_write(buffer: &[u8]) {
     for &b in buffer {
@@ -102,7 +147,7 @@ where
     
     for addr in 0x01..0x7F {
         let mut tmp = [0u8; 1];
-        match i2c.read(addr, &mut tmp) {
+        match i2c.read(addr, &mut tmp).await {
             Ok(_) => {
                 defmt::info!("Found device at address: {=u8:#04x}", addr);
             }
@@ -605,6 +650,19 @@ fn do_can_stuff() -> Result<(), CanError> {
         w.set_tbds(0); // max 8 byte data payloads in TX elements.
     });
 
+    can.mcan(0).ie().write(|w| {
+        w.set_rf0ne(true); // trigger an interrupt on new element in RX FIFO?
+    });
+    can.mcan(0).ile().write(|w| {
+        w.set_eint0(true);
+    });
+    can.ti_wrapper(0).msp(0).cpu_int(0).imask().write(|w| {
+        w.set_intl0(true);
+    });
+    can.ti_wrapper(0).msp(0).evt_mode().write(|w| {
+        w.set_int0_cfg(CanVals::Int0Cfg::SOFTWARE);
+    });
+
     let mut z = McanFilter11::ZERO;
     z.set_sft(StandardFilterType::RangeFilter);
     z.set_sfec(StandardFilterConfig::StoreRXFIFO0);
@@ -657,7 +715,8 @@ async fn main(_spawner: Spawner) -> ! {
     info!("Init completed");
     embassy_time::Timer::after(Duration::from_millis(100)).await;  
 
-    let mut i2cinter = i2c::I2c::new_blocking(periph.I2C1, periph.PA4, periph.PA3, i2c::Config::default()).unwrap();
+    let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, i2c::Config::default()).unwrap();
+
 
     info!("was OK");
     
@@ -672,6 +731,10 @@ async fn main(_spawner: Spawner) -> ! {
     }
 
     let mut msgram = unsafe {McanMessageRAM::new_mmio_at(0x4050_8000)};
+
+    let canint = embassy_mspm0::interrupt::typelevel::CANFD0::IRQ;
+    unsafe { canint.enable() };
+    //embassy_mspm0::interrupt::typelevel::CANFD0::enable();
 
 
     info!("offsets calc 1: {}", McanMessageRAM::OFFSETS);
@@ -700,9 +763,10 @@ async fn main(_spawner: Spawner) -> ! {
         let txfs = embassy_mspm0::pac::CANFD0.mcan(0).txfqs().read();
         //info!("TX FIFO fill level: {}, get index: {}, put index: {}, full: {}", txfs.tffl(), txfs.tfgi(), txfs.tfqp(), txfs.tfqf());
 
+        info!("interrupts: {:x} - {:x} - {:x} - {:x}", embassy_mspm0::pac::CANFD0.mcan(0).ir().read().0, embassy_mspm0::pac::CANFD0.ti_wrapper(0).msp(0).cpu_int(0).ris().read().0, embassy_mspm0::pac::CANFD0.mcan(0).ie().read().0, embassy_mspm0::pac::CANFD0.ti_wrapper(0).msp(0).cpu_int(0).imask().read().0);
         interval += 1;
 
-        if interval > 10 {
+        if interval > 100 {
             interval = 0;
 
             // Send a heartbeat?
@@ -784,7 +848,7 @@ async fn main(_spawner: Spawner) -> ! {
         //info!("TX event FIFO get index: {}, put index: {}, fill level: {}", event_fs.efgi(), event_fs.efpi(), event_fs.effl());
         if event_fs.efgi() != event_fs.efpi() {
             let thismsg = msgram.read_txevents(event_fs.efgi() as usize).expect("out of bounds!?");
-            info!("Got TX event: {:?}", thismsg);
+            //info!("Got TX event: {:?}", thismsg);
             embassy_mspm0::pac::CANFD0.mcan(0).txefa().write(|w| {
                 w.set_efai(event_fs.efgi());
             });
