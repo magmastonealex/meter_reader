@@ -421,27 +421,36 @@ fn do_can_stuff() -> Result<(), CanError> {
 
     // Turn on the CAN peripheral!
     let can = embassy_mspm0::pac::CANFD0;
+
+    // If you reset the MCAN peripheral, you _must_ wait >>>> the usual 16 cycles before enabling clock request or touching any MCAN registers,
+    // or the peripheral will never initialize correctly until a SYSRST.
+    can.rstctl().write(|w| {
+        w.set_resetstkyclr(true);
+        w.set_resetassert(true);
+        w.set_key(CanVals::ResetKey::KEY);
+    });
+
+    
     can.pwren().write(|w| {
         w.set_enable(true);
         w.set_key(CanVals::PwrenKey::KEY);
     });
-    cortex_m::asm::delay(16);
+    
+    // Clear undocumented errata: If this is the usual ~16 cycles, then the peripheral will be locked up and always report zeros for all registers, never functional on this boot.
+    // You need to wait much, much longer before your first access to the peripheral to prevent the lockup. This is reproducable with TI's SDK.
+    // I opened an e2e request: https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1605241/mspm0g3107-mcan-peripheral-does-not-complete-initialization-after-power-on-reset
+    // though I don't really expect an answer.
+    // 
+    // Equivalent e2e post (though they never figured out why it was happening)
+    // https://e2e.ti.com/support/microcontrollers/msp-low-power-microcontrollers-group/msp430/f/msp-low-power-microcontroller-forum/1473992/lp-mspm0g3507-mcan-stuck-in-dl_mcan_getopmode-during-initializatio
+    cortex_m::asm::delay(1000000);
 
-    /*
-        // Performing this reset seems to lock up the peripheral - it will never complete memory initialization and all values will read as zeros.
-        // It also seems to mess with the peripheral bus, as i2c seems to misbehave... avoid doing this right now.
-        // I don't see any errata, but TI's examples don't seem to ever reset it?
-        can.rstctl().write(|w| {
-            w.set_resetstkyclr(true);
-            w.set_resetassert(true);
-            w.set_key(CanVals::ResetKey::KEY);
-        });
-    */
     
     // Allow the peripheral to keep running in debug halt mode.
-    can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_ctrl().modify(|w| {
-        w.set_dbgsusp_free(true);
-    });
+
+    //can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_ctrl().modify(|w| {
+    //    w.set_dbgsusp_free(true);
+    //});
 
     // this is NOT in the reference manual, but to get the peripheral to work,
     // you need to set a clock request for the peripheral in the "wrapper" around Bosch's MCAN IP.
@@ -462,9 +471,13 @@ fn do_can_stuff() -> Result<(), CanError> {
         cortex_m::asm::delay(9000);
     }
 
+    // On a hard reset we get stuck here and the peripheral doesn't seem to ever start working.
     cnt = 0;
     while !can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_stat().read().mem_init_done() {
         if cnt > 10000 {
+            info!("MCAN status? {:x}", SYSCTL.sysstatus().read().mcan0ready());
+            info!("CAN module data: {:x}", can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_pid().read().scheme());
+            info!("CAN module data: {:x}", can.ti_wrapper(0).processors(0).subsys_regs(0).subsys_pid().read().module_id());
             return Err(CanError::CANNotRespondingMem);
         }
         cnt += 1;
@@ -533,7 +546,7 @@ fn do_can_stuff() -> Result<(), CanError> {
 
     // Set global filter configuration.
     can.mcan(0).gfc().write(|w| {
-        w.set_anfs(0x00); // accept non-matching 11-bit id frames into RX FIFO 0.
+        w.set_anfs(0x10); // reject non-matching 11-bit id frames into RX FIFO 0.
         w.set_anfe(0b10); // Reject extended frames for now.
         w.set_rrfs(true);
         w.set_rrfe(true);
@@ -663,7 +676,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     info!("offsets calc 1: {}", McanMessageRAM::OFFSETS);
     info!("lengths:  {}", McanMessageRAM::LENGTHS);
-
+    let mut interval = 0;
     loop {
         led_output.toggle();
         if s2.is_low() {
@@ -677,15 +690,49 @@ async fn main(_spawner: Spawner) -> ! {
         //uart.blocking_write(b"abcd1334\r\n").unwrap();
         let ecr = embassy_mspm0::pac::CANFD0.mcan(0).ecr().read();
         let psr = embassy_mspm0::pac::CANFD0.mcan(0).psr().read();
-        info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
-        info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
+        //info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
+        //info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
         embassy_time::Timer::after(Duration::from_millis(100)).await;
 
         let fs = embassy_mspm0::pac::CANFD0.mcan(0).rxf0s().read();
-        info!("RX FIFO fill level: {}, get index: {}, put index: {}, full: {}", fs.f0fl(), fs.f0gi(), fs.f0pi(), fs.f0f());
+        //info!("RX FIFO fill level: {}, get index: {}, put index: {}, full: {}", fs.f0fl(), fs.f0gi(), fs.f0pi(), fs.f0f());
 
         let txfs = embassy_mspm0::pac::CANFD0.mcan(0).txfqs().read();
-        info!("TX FIFO fill level: {}, get index: {}, put index: {}, full: {}", txfs.tffl(), txfs.tfgi(), txfs.tfqp(), txfs.tfqf());
+        //info!("TX FIFO fill level: {}, get index: {}, put index: {}, full: {}", txfs.tffl(), txfs.tfgi(), txfs.tfqp(), txfs.tfqf());
+
+        interval += 1;
+
+        if interval > 10 {
+            interval = 0;
+
+            // Send a heartbeat?
+            if embassy_mspm0::pac::CANFD0.mcan(0).txfqs().read().tfqf() {
+                info!("Could not hb - queue full!");
+            } else {
+                let write_idx = embassy_mspm0::pac::CANFD0.mcan(0).txfqs().read().tfqp();
+                msgram.modify_txfifo0(write_idx as usize, |mut w| {
+                    w.data[0] = 0x01;
+                    w.hdr2.set_dlc(u4::new(1));
+                    w.hdr1.set_rtr(false);
+                    w.hdr1.set_xtd(false);
+                    w.hdr1.set_esi(false);
+                    let id: u32 = 0x40Fu32 << 18;
+                    w.hdr1.set_id(u29::new(id));
+
+                    w.hdr2.set_marker(123);
+                    w.hdr2.set_track_fifo(true);
+
+                    w
+                }).expect("write idx out of range?");
+
+                let fifoentry = msgram.read_txfifo0(write_idx as usize);
+                info!("Writing: idx {} {:?}", write_idx, fifoentry);
+
+                embassy_mspm0::pac::CANFD0.mcan(0).txbar().write(|w| { 
+                    w.0 = 1 << write_idx;
+                });
+            }
+        }
 
         if fs.f0gi() != fs.f0pi() {
             let thismsg = msgram.read_rxfifo0(fs.f0gi() as usize).expect("out of bounds!?");
@@ -734,7 +781,7 @@ async fn main(_spawner: Spawner) -> ! {
 
         let event_fs = embassy_mspm0::pac::CANFD0.mcan(0).txefs().read();
         
-        info!("TX event FIFO get index: {}, put index: {}, fill level: {}", event_fs.efgi(), event_fs.efpi(), event_fs.effl());
+        //info!("TX event FIFO get index: {}, put index: {}, fill level: {}", event_fs.efgi(), event_fs.efpi(), event_fs.effl());
         if event_fs.efgi() != event_fs.efpi() {
             let thismsg = msgram.read_txevents(event_fs.efgi() as usize).expect("out of bounds!?");
             info!("Got TX event: {:?}", thismsg);
