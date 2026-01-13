@@ -1,7 +1,10 @@
+use core::marker::PhantomData;
+
 use embassy_hal_internal::PeripheralType;
 
+use embassy_mspm0::Peri;
+use embassy_mspm0::gpio::AnyPin;
 use embassy_mspm0::interrupt::Interrupt;
-use embassy_mspm0::mode::Mode;
 use embassy_mspm0::pac::canfd::{Canfd as Regs, vals as CanVals};
 use embassy_sync::waitqueue::AtomicWaker;
 
@@ -56,19 +59,102 @@ impl Instance for embassy_mspm0::peripherals::CANFD0 {
     type Interrupt = crate::interrupt::typelevel::CANFD0; // I'm still unclear why this type is needed _here_ too.
 }
 
-// the Blocking vs Async type parameters seem to be here to mostly avoid creating separate types? I'm not 100% clear on why that's preferrable.
-// oh - unless there's truly common functionality between the two of them that's worth preserving? 
 
-// I think the lifetime parameter here is done to ensure the struct can't outlive the pins?
-// going to try eliding this for now and see what happens.
-pub struct I2c<M: Mode> {
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(defmt::Format)]
+pub enum ClockDiv {
+    // Do not divide clock source.
+    DivBy1,
+    // Divide clock source by 2.
+    DivBy2,
+    // Divide clock source by 4.
+    DivBy4,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(defmt::Format)]
+/// Structure to encode CAN timing parameter information.
+/// Note that the hardware adds '1' to each of the values placed in the registers of the peripheral.
+/// This crate handles this for you, so the values in this struct should be the actual values you wish to use.
+pub struct CanTimings {
+    brs: u16, /// Bitrate prescaler, valid values 1-512. 
+    sjw: u8, /// Sync Jump Width - valid values 1-128, though must also be <= ntseg2.
+    ntseg1: u16, // Segment 1 time. Valid values are 2-256
+    ntseg2: u8, // Segment 2 time. Valid values are 2-128.
+}
+
+impl CanTimings {
+    pub const fn from_values(brs: u16, sjw: u8, ntseg1: u16, ntseg2: u8) -> Option<CanTimings> {
+        Some(CanTimings { brs, sjw, ntseg1, ntseg2 })
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug, defmt::Format)]
+/// CAN Configuration
+pub struct Config {
+    /// Input clock rate
+    /// (Temporary - currently this crate doesn't support more complex clock configurations - CAN clock will always be sourced from HFXT/HFEXT_IN, and we require the clock rate here)
+    pub functional_clock_rate: u32,
+
+    /// Input clock divider
+    pub clock_div: ClockDiv,
+
+    /// CAN timings to use for standard CAN. (CAN-FD support to come later.)
+    pub timing: CanTimings
+}
+
+#[non_exhaustive]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(defmt::Format)]
+/// Config Error
+pub enum InitializationError {
+    /// Clock source not enabled.
+    ///
+    /// The clock soure is not enabled is SYSCTL.
+    ClockSourceNotEnabled,
+
+    /// Peripheral timed out.
+    ///
+    /// Failed to handshake with the CAN peripheral in a reasonable time - often indicates the peripheral has locked up
+    /// and the device will need to be reset before it will function again.
+    PeripheralTimedOut,
+}
+
+pub struct Can<'d, M: mode::Mode> {
     info: &'static Info,
     state: &'static State,
-    scl: Option<Peri<'d, AnyPin>>,
-    sda: Option<Peri<'d, AnyPin>>,
+    rx: Option<Peri<'d, AnyPin>>,
+    tx: Option<Peri<'d, AnyPin>>,
     _phantom: PhantomData<M>,
 }
 
+impl<'d> Can<'d, mode::Blocking> {
+    pub fn new_blocking<T: Instance> (
+        peri: Peri<'d, T>,
+        rx: Peri<'d, impl RxPin<T>>,
+        tx: Peri<'d, impl RxPin<T>>,
+        config: Config
+    ) -> Result<Self, InitializationError> {
+
+        Self::new_inner(peri, rx, tx, config)
+    }
+}
+
+impl<'d, M: mode::Mode> Can<'d, M> {
+    fn new_inner<T: Instance> (
+        _peri: Peri<'d, T>,
+        rx: Peri<'d, impl RxPin<T>>,
+        tx: Peri<'d, impl RxPin<T>>,
+        mut config: Config
+    ) -> Result<Self, InitializationError> {
+
+        // Note: use new_pin! when in tree.
+
+        rx.
+        
+        Err(InitializationError::ClockSourceNotEnabled)
+    }
+}
 
 // RX and TX pin traits - normally constructed via a macro, we'll do it manually to demonstrate functionality.
 // These are effectively sealed because pf_num isn't public so can't be implemented by anyone else.
@@ -92,4 +178,23 @@ impl TxPin<embassy_mspm0::peripherals::CANFD0> for embassy_mspm0::peripherals::P
     fn pf_num(&self) -> u8 {
         6u8
     }
+}
+
+// temp while out of tree - replace with embassy-mspm0's `Mode` directly.
+pub mod mode {
+    trait SealedMode {}
+
+    /// Operating mode for a peripheral.
+    #[allow(private_bounds)]
+    pub trait Mode: SealedMode {}
+
+    /// Blocking mode.
+    pub struct Blocking;
+    impl SealedMode for Blocking {}
+    impl Mode for Blocking {}
+
+    /// Async mode.
+    pub struct Async;
+    impl SealedMode for Async {}
+    impl Mode for Async {}
 }

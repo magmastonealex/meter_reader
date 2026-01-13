@@ -41,7 +41,7 @@ bind_interrupts!(struct Irqs {
     CANFD0 => CanInterruptHandler;
 });
 
-mod cancontroller;
+//mod cancontroller;
 
 struct CanInterruptHandler;
 

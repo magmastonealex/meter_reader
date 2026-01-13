@@ -25,12 +25,10 @@ panic-probe = { version = "1.0"}
 semihosting = "0.1.20"
 
 # note - feature is misspelled in upstream?
-embassy-mspm0 = { git = "https://github.com/embassy-rs/embassy", rev = "62ed44f99af9e33d689c8308149f8f992176895f",  features = ["mspm0g3106dgs28", "rt", "time-driver-timg8", "unstable-pac"]}
-embassy-time = { git = "https://github.com/embassy-rs/embassy", rev = "62ed44f99af9e33d689c8308149f8f992176895f", features = ["defmt", "defmt-timestamp-uptime"]}
-embassy-executor = { git = "https://github.com/embassy-rs/embassy", rev = "62ed44f99af9e33d689c8308149f8f992176895f", features = ["arch-cortex-m", "executor-thread", "executor-interrupt"] }
-embassy-sync = { git = "https://github.com/embassy-rs/embassy", rev = "62ed44f99af9e33d689c8308149f8f992176895f"}
-# Hack - import embassy-hal-internal manually for now so we can work through the CAN driver.
-embassy-hal-internal = { git = "https://github.com/embassy-rs/embassy", rev = "62ed44f99af9e33d689c8308149f8f992176895f", features = ["defmt"]}
+embassy-mspm0 = { path = "/home/alex/embassy/embassy-mspm0",  features = ["mspm0g3106dgs28", "rt", "time-driver-timg8", "unstable-pac"]}
+embassy-time = { path = "/home/alex/embassy/embassy-time", features = ["defmt", "defmt-timestamp-uptime"]}
+embassy-executor = { path = "/home/alex/embassy/embassy-executor", features = ["arch-cortex-m", "executor-thread", "executor-interrupt"] }
+embassy-sync = { path = "/home/alex/embassy/embassy-sync"}
 embedded-hal = "1.0.0"
 embedded-hal-nb = { version = "1.0" }
 embedded-hal-async = { version = "1.0" }
@@ -40,8 +38,8 @@ derive-mmio = { version = "0.6.1", features = ["defmt"]}
 bitbybit = "1.4.0"
 arbitrary-int = { version = "2.0.0", features = ["defmt"] }
 
-[patch.'https://github.com/mspm0-rs/mspm0-data-generated/']
-mspm0-metapac = { path = "/home/alex/mspm0-data/build/mspm0-metapac/" }
+#[patch.'https://github.com/mspm0-rs/mspm0-data-generated/']
+#mspm0-metapac = { path = "/home/alex/mspm0-data/build/mspm0-metapac/" }
 
 [dev-dependencies]
 defmt-test = "0.3"
