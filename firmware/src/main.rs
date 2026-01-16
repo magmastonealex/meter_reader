@@ -8,6 +8,7 @@ use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 use arbitrary_int::{u2, u4, u5, u7, u11, u29};
 use cortex_m::{asm::nop};
 use derive_mmio::Mmio;
+use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
 use embassy_mspm0::interrupt::{self, InterruptExt};
 use embassy_mspm0::interrupt::typelevel::Interrupt;
@@ -31,6 +32,8 @@ use embassy_time::{Duration};
 
 use embassy_mspm0::pac::{IOMUX, SYSCTL};
 use bitbybit::{bitenum, bitfield};
+
+use embedded_can::{Frame, Id, StandardId};
 
 
 use defmt::{info, warn, error};
@@ -205,15 +208,26 @@ async fn main(_spawner: Spawner) -> ! {
             led_output_2.toggle();
         }
         canstb.set_low();
-        
 
         uart.blocking_write(b"ab\r\n").unwrap();
 
         //uart.blocking_write(b"abcd1334\r\n").unwrap();
         let ecr = embassy_mspm0::pac::CANFD0.mcan(0).ecr().read();
         let psr = embassy_mspm0::pac::CANFD0.mcan(0).psr().read();
-        info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
-        info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
+        //info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
+        //info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
+        let fs = embassy_mspm0::pac::CANFD0.mcan(0).rxf0s().read();
+        //info!("RX FIFO fill level: {}, get index: {}, put index: {}, full: {}", fs.f0fl(), fs.f0gi(), fs.f0pi(), fs.f0f());
+
+        if candriver.has_frame() {
+            let mut frame = candriver.get_frame();
+            info!("Got frame: {}", frame);
+            frame.set_id(Id::Standard(StandardId::new(0x0ab).unwrap()));
+            info!("Sending reply...");
+            candriver.send_frame(frame);
+
+        }
+
         embassy_time::Timer::after(Duration::from_millis(100)).await;
 
         
