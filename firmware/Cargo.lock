@@ -378,7 +378,7 @@ version = "0.1.2"
 
 [[package]]
 name = "embassy-hal-internal"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "cortex-m",
  "critical-section",
@@ -400,7 +400,6 @@ dependencies = [
  "embassy-futures",
  "embassy-hal-internal",
  "embassy-sync",
- "embassy-time",
  "embassy-time-driver",
  "embassy-time-queue-utils",
  "embedded-can",
@@ -415,6 +414,7 @@ dependencies = [
  "mspm0-metapac",
  "proc-macro2",
  "quote",
+ "rand_core",
 ]
 
 [[package]]
@@ -682,6 +682,7 @@ checksum = "c3c8dda44ff03a2f238717214da50f65d5a53b45cd213a7370424ffdb6fae815"
 [[package]]
 name = "mspm0-metapac"
 version = "0.0.1"
+source = "git+https://github.com/mspm0-rs/mspm0-data-generated/?tag=mspm0-data-566cf58760f60a9126c957ae9b6b3364e46ed595#246b2cb9d69ef7f7c4e80b5818bb03a2ec8df1e9"
 dependencies = [
  "cortex-m",
  "cortex-m-rt",
@@ -806,6 +807,12 @@ checksum = "a338cc41d27e6cc6dce6cefc13a0729dfbb81c262b1f519331575dd80ef3067f"
 dependencies = [
  "proc-macro2",
 ]
+
+[[package]]
+name = "rand_core"
+version = "0.9.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "76afc826de14238e6e8c374ddcc1fa19e374fd8dd986b0d2af0d02377261d83c"
 
 [[package]]
 name = "regex-automata"

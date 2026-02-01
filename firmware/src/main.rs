@@ -12,23 +12,26 @@ use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
 use embassy_mspm0::interrupt::{self, InterruptExt};
 use embassy_mspm0::interrupt::typelevel::Interrupt;
+use embassy_mspm0::mode::Async;
 use embassy_mspm0::pac::canfd::{Canfd, vals as CanVals};
 use embassy_mspm0::pac::sysctl::regs::{Syspllparam0, Syspllparam1};
 use embassy_mspm0::{Config, gpio::Output};
 
 use embassy_mspm0::{Peri, bind_interrupts, can};
 use embassy_mspm0::i2c::{self};
-use embassy_mspm0::peripherals::I2C1;
+use embassy_mspm0::peripherals::{I2C1, CANFD0};
 
 use embassy_mspm0::uart::{self, UartTx};
 use embassy_mspm0::peripherals::UART0;
 
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
 use embedded_io_async::Write;
 
-use embassy_executor::Spawner;
+use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
+use embassy_time::{Duration, Instant, Timer};
 
-use embassy_time::{Duration};
+use embassy_executor::Spawner;
 
 use embassy_mspm0::pac::{IOMUX, SYSCTL};
 use bitbybit::{bitenum, bitfield};
@@ -41,6 +44,7 @@ use defmt::{info, warn, error};
 use defmt_rtt as _;
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
+    CANFD0 => can::InterruptHandler<CANFD0>;
 });
 
 //mod cancontroller;
@@ -124,42 +128,67 @@ where
 
     defmt::info!("I2C Scan complete.");
 }
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-#[derive(defmt::Format)]
-pub enum CanError {
-    ClockNotComingUp,
-    CANNotRespondingReset,
-    CANNotRespondingMem,
-    CANNotResponding
+static OUTBOUND: Channel<ThreadModeRawMutex, MCanFrame, 10> = Channel::new();
+
+#[embassy_executor::task]
+async fn periodic_hello(outgoing: DynamicSender<'static, MCanFrame>) {
+    loop {
+        Timer::after_secs(5).await;
+
+        for number in 1u8..10 {
+            let frame =
+                can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x123).unwrap()), &[0x12u8, 0x34, number])
+                    .unwrap();
+            outgoing.send(frame).await;
+            info!("Sent hello frame!");
+        }
+    }
 }
 
-fn setup_hfext() -> Result<(), CanError> {
-    // Hack: Set up HFXT with the 25MHz oscillator
-    // We'll use this for clocking the CAN peripheral
-    // PA6 - PINCM11. Pin function 6 is HFCLK_IN.
-    IOMUX.pincm(10).modify(|w| {
-        w.set_pf(6);
-        w.set_inena(true);
-        w.set_pc(true);
-    });
-    SYSCTL.hsclken().modify(|w| {
-        w.set_useexthfclk(true);
-    });
-
-    let mut cnt = 0;
-    while !SYSCTL.clkstatus().read().hfclkgood() {
-        if cnt > 1000 {
-            return Err(CanError::ClockNotComingUp);
-        }
-        cnt += 1;
-        cortex_m::asm::delay(1000);
+#[embassy_executor::task]
+async fn transmitter_mux(mut tx: can::CanTx<Async>, incoming: DynamicReceiver<'static, MCanFrame>) {
+    loop {
+        let frame = incoming.receive().await;
+        tx.enqueue_frame(&frame).await.expect("no buserror possible");
     }
+}
 
-    Ok(())
+#[embassy_executor::task]
+async fn receiver(mut rx: can::CanRx<Async>, outgoing: DynamicSender<'static, MCanFrame>) {
+    loop {
+        let mut frame = rx.get_frame().await.expect("no buserror possible right now");
+        info!("Received frame: {}", frame);
+        frame.set_id(Id::Standard(StandardId::new(0x0ab).unwrap()));
+        info!("Sending reply... {}", frame);
+        outgoing.send(frame).await;    
+    }
+}
+
+#[embassy_executor::task]
+async fn can_maintainer(mut status: can::CanStatus<'static>) {
+    loop {
+        Timer::after_secs(3).await;
+
+        let errors = status.get_error_counters();
+
+        info!("CAN error counters: {:?}", errors);
+
+        if errors.bus_off {
+            info!("Starting bus-off recovery");
+            match status.recover() {
+                Ok(_) => {
+                    info!("Bus-off recovery completed.");
+                }
+                Err(e) => {
+                    warn!("Bus-off recovery failed: {}", e);
+                }
+            }
+        }
+    }
 }
 
 #[embassy_executor::main]
-async fn main(_spawner: Spawner) -> ! {
+async fn main(spawner: Spawner) -> ! {
     let periph = embassy_mspm0::init(Default::default());
     let mut led_output = Output::new(periph.PA25, embassy_mspm0::gpio::Level::Low);
     let mut led_output_2 = Output::new(periph.PA10, embassy_mspm0::gpio::Level::High);
@@ -187,49 +216,21 @@ async fn main(_spawner: Spawner) -> ! {
 
     // need to zero this somehow - unsafe?
 
-    if let Err(e) = setup_hfext() {
-        error!("Failed to configure hfclk: {:?}", e);
-    } else {
-        info!("CAN configured?");
-    }
 
-    let mut candriver = can::Can::new_blocking(periph.CANFD0, periph.PA27, periph.PA26, can::Config {
-        functional_clock_rate: 25_000_000,
-        clock_div: can::ClockDiv::DivBy1,
-        accept_extended_ids: true,
-        accept_remote_frames: false,
-        timing: can::CanTimings::from_values(1, 30, 219, 30).unwrap(),
-    }).unwrap();
+    let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, can::Config::default()).unwrap();
+    let (tx, rx, status) = candriver.split();
 
-    let mut interval = 0;
+    spawner.spawn(receiver(rx, OUTBOUND.dyn_sender()).unwrap());
+    spawner.spawn(transmitter_mux(tx, OUTBOUND.dyn_receiver()).unwrap());
+    spawner.spawn(periodic_hello(OUTBOUND.dyn_sender()).unwrap());
+    spawner.spawn(can_maintainer(status).unwrap());
+
     loop {
         led_output.toggle();
         if s2.is_low() {
             led_output_2.toggle();
         }
-        canstb.set_low();
 
-        uart.blocking_write(b"ab\r\n").unwrap();
-
-        //uart.blocking_write(b"abcd1334\r\n").unwrap();
-        let ecr = embassy_mspm0::pac::CANFD0.mcan(0).ecr().read();
-        let psr = embassy_mspm0::pac::CANFD0.mcan(0).psr().read();
-        //info!("ECR: {} {} {} {}", ecr.cel(), ecr.rp(), ecr.rec(), ecr.tec());
-        //info!("PSR: ep {} pxe {} lec {} bo {}", psr.ep(), psr.pxe(), psr.lec(), psr.bo());
-        let fs = embassy_mspm0::pac::CANFD0.mcan(0).rxf0s().read();
-        //info!("RX FIFO fill level: {}, get index: {}, put index: {}, full: {}", fs.f0fl(), fs.f0gi(), fs.f0pi(), fs.f0f());
-
-        if candriver.has_frame() {
-            let mut frame = candriver.get_frame();
-            info!("Got frame: {}", frame);
-            frame.set_id(Id::Standard(StandardId::new(0x0ab).unwrap()));
-            info!("Sending reply...");
-            candriver.send_frame(frame);
-
-        }
-
-        embassy_time::Timer::after(Duration::from_millis(100)).await;
-
-        
+        embassy_time::Timer::after(Duration::from_millis(250)).await;
     } 
 }
