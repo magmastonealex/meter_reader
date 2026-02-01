@@ -1,45 +1,36 @@
 #![no_main]
 #![no_std]
 
+mod mlx;
+
 use core::panic::PanicInfo;
-use core::ptr;
 use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 
-use arbitrary_int::{u2, u4, u5, u7, u11, u29};
-use cortex_m::{asm::nop};
-use derive_mmio::Mmio;
 use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
-use embassy_mspm0::interrupt::{self, InterruptExt};
-use embassy_mspm0::interrupt::typelevel::Interrupt;
 use embassy_mspm0::mode::Async;
-use embassy_mspm0::pac::canfd::{Canfd, vals as CanVals};
-use embassy_mspm0::pac::sysctl::regs::{Syspllparam0, Syspllparam1};
-use embassy_mspm0::{Config, gpio::Output};
+use embassy_mspm0::gpio::Output;
 
-use embassy_mspm0::{Peri, bind_interrupts, can};
+use embassy_mspm0::{bind_interrupts, can};
 use embassy_mspm0::i2c::{self};
 use embassy_mspm0::peripherals::{I2C1, CANFD0};
 
-use embassy_mspm0::uart::{self, UartTx};
-use embassy_mspm0::peripherals::UART0;
+use embassy_mspm0::uart::UartTx;
 
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
 use embedded_io_async::Write;
 
 use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::{Duration, Timer};
 
 use embassy_executor::Spawner;
 
-use embassy_mspm0::pac::{IOMUX, SYSCTL};
-use bitbybit::{bitenum, bitfield};
+use mlx::Mlx90394;
 
 use embedded_can::{Frame, Id, StandardId};
 
-
-use defmt::{info, warn, error};
+use defmt::{info, warn};
 
 use defmt_rtt as _;
 bind_interrupts!(struct Irqs {
@@ -101,7 +92,7 @@ fn panic(info: &PanicInfo) -> ! {
 unsafe fn HardFault(_frame: &cortex_m_rt::ExceptionFrame) -> ! {
     panic!("Got a HardFault");
 }
-
+/*
 pub async fn i2c_scan<I>(i2c: &mut I) -> ()
 where
     I: I2c,
@@ -128,6 +119,7 @@ where
 
     defmt::info!("I2C Scan complete.");
 }
+     */
 static OUTBOUND: Channel<ThreadModeRawMutex, MCanFrame, 10> = Channel::new();
 
 #[embassy_executor::task]
@@ -135,7 +127,7 @@ async fn periodic_hello(outgoing: DynamicSender<'static, MCanFrame>) {
     loop {
         Timer::after_secs(5).await;
 
-        for number in 1u8..10 {
+        for number in 1u8..1 {
             let frame =
                 can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x123).unwrap()), &[0x12u8, 0x34, number])
                     .unwrap();
@@ -187,15 +179,24 @@ async fn can_maintainer(mut status: can::CanStatus<'static>) {
     }
 }
 
+
+
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let periph = embassy_mspm0::init(Default::default());
     let mut led_output = Output::new(periph.PA25, embassy_mspm0::gpio::Level::Low);
     let mut led_output_2 = Output::new(periph.PA10, embassy_mspm0::gpio::Level::High);
 
-    let mut canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
+    let canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
 
-    let s2 = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
+    // TRM says that TRACEID is unique per part shipped,
+    // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
+    // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
+    let traceid: u32 = unsafe{ core::ptr::read_volatile((0x41C4_0000) as *const u32) };
+
+    info!("traceid: {:08x}", traceid);
+
+    let mut s2 = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
     
     let tx = periph.PA21;
 
@@ -203,16 +204,19 @@ async fn main(spawner: Spawner) -> ! {
     config.baudrate = 115200;
 
     //let mut uart = Uart::new_blocking(periph.UART0, rx, tx, config).unwrap();
-    let mut uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
+    let uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
 
     info!("Init completed");
     embassy_time::Timer::after(Duration::from_millis(100)).await;  
 
-    let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, i2c::Config::default()).unwrap();
+    //let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, i2c::Config::default()).unwrap();
+    let mut cfg = i2c::Config::default();
+    cfg.bus_speed = i2c::BusSpeed::FastMode;
+    let i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, cfg).unwrap();
 
     info!("was OK");
     
-    i2c_scan(&mut i2cinter).await;
+    //i2c_scan(&mut i2cinter).await;
 
     // need to zero this somehow - unsafe?
 
@@ -225,12 +229,29 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(periodic_hello(OUTBOUND.dyn_sender()).unwrap());
     spawner.spawn(can_maintainer(status).unwrap());
 
-    loop {
-        led_output.toggle();
-        if s2.is_low() {
-            led_output_2.toggle();
-        }
+    let mut outgoing = OUTBOUND.dyn_sender();
 
-        embassy_time::Timer::after(Duration::from_millis(250)).await;
+    let mut mlx = Mlx90394::new_init(i2cinter, 0x10).await.unwrap();
+
+    info!("initialized mlx");
+    loop {
+        /*if s2.is_low() {
+            led_output_2.set_high();
+        } else {
+            led_output_2.set_low();
+        }*/
+
+        s2.wait_for_falling_edge().await;
+
+        //if mlx.data_ready().await.unwrap() {
+            led_output.toggle();
+            let mut magdata = [0x0u8; 7];
+            mlx.dump_data(&mut magdata).await.unwrap();
+            let frame =
+                can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x129).unwrap()), &magdata)
+                    .unwrap();
+            outgoing.send(frame).await;
+        //}
+
     } 
 }
