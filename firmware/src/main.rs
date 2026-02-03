@@ -32,13 +32,64 @@ use embedded_can::{Frame, Id, StandardId};
 
 use defmt::{info, warn};
 
+// Hack for flashctl support before upstream support.
+mod common;
+mod flashctl;
+
+pub const FLASHCTL: flashctl::Flashctl = unsafe {
+    flashctl::Flashctl::from_ptr(1074581504 as *mut _)
+};
+
 use defmt_rtt as _;
+
+use crate::flashctl::regs::{Cmdbyten, Cmdexec, Cmdweprotb};
+use crate::flashctl::vals::{Cmddone, Cmdpass, Failweprot};
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
     CANFD0 => can::InterruptHandler<CANFD0>;
 });
 
+#[unsafe(link_section = ".data")] // <- the important part
+#[inline(never)] // you don't want this to be inlined, right?
+#[unsafe(no_mangle)]
+extern "C" fn flashctl_pgm() {
+    FLASHCTL.cmdexec().write_value(Cmdexec(0x01));
+
+    while FLASHCTL.statcmd().read().cmddone() != Cmddone::STATDONE {
+    }
+}
+
+fn flashctl_write() {
+    FLASHCTL.cmdweprotb().write_value(Cmdweprotb(120u32));
+    FLASHCTL.cmdaddr().write_value(0x0001_E000);
+    FLASHCTL.cmdctl().modify(|w| { // DS is wrong? many fields missing from SVD.
+        w.set_eccgenovr(false);
+    });
+    FLASHCTL.cmdbyten().write_value(Cmdbyten(0x1FF)); // DS is wrong - actually a 9 bit value not 8 bit.
+    FLASHCTL.cmddata0().write_value(0xABCD_EF01);
+    FLASHCTL.cmddata1().write_value(0x1234_5678);
+    FLASHCTL.cmdtype().write(|w| {
+        w.set_command(flashctl::vals::Command::PROGRAM);
+        w.set_size(flashctl::vals::Size::ONEWORD);
+    });
+
+    
+
+    // The software sequence of setting the CMDEXEC bit and waiting for the CMDDONE response must be executed
+    // from either the device SRAM or from a different flash bank from the bank that is being operated on, as the
+    // flash controller will take control of the flash bank undergoing the operation. Reads to the flash bank that is being
+    // operated on while the flash controller is executing the command are not predictable.
+
+    // these bits need to be done in asm or ramfunc or something.
+    flashctl_pgm();
+}
+
 //mod cancontroller;
+// 1K sector size
+// 64 bit word size
+// ideal case is write an entire 64 bit word at once
+// if you don't, you have to read it back through non ECC alias so you don't trigger faults.
+// 0x0001E000
 
 fn uart_ll_write(buffer: &[u8]) {
     for &b in buffer {
@@ -48,6 +99,8 @@ fn uart_ll_write(buffer: &[u8]) {
             w.set_data(b);
         });
     }
+
+    
 }
 
 // This panic handler dumps stuff to UART.
@@ -189,6 +242,7 @@ async fn main(spawner: Spawner) -> ! {
 
     let canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
 
+    flashctl_write();
     // TRM says that TRACEID is unique per part shipped,
     // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
     // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
