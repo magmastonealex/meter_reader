@@ -1,5 +1,6 @@
+#![allow(dead_code)]
 use defmt::info;
-use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
+use embedded_hal_async::i2c::{I2c};
 
 pub struct Mlx90394<I2C> {
     i2c: I2C,
