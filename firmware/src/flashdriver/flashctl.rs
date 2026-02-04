@@ -28,163 +28,163 @@ impl Flashctl {
     }
     #[doc = "Interrupt Index Register."]
     #[inline(always)]
-    pub const fn iidx(self) -> crate::common::Reg<regs::Iidx, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1020usize) as _) }
+    pub const fn iidx(self) -> super::common::Reg<regs::Iidx, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1020usize) as _) }
     }
     #[doc = "Interrupt Mask Register."]
     #[inline(always)]
-    pub const fn imask(self) -> crate::common::Reg<regs::Imask, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1028usize) as _) }
+    pub const fn imask(self) -> super::common::Reg<regs::Imask, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1028usize) as _) }
     }
     #[doc = "Raw Interrupt Status Register."]
     #[inline(always)]
-    pub const fn ris(self) -> crate::common::Reg<regs::Ris, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1030usize) as _) }
+    pub const fn ris(self) -> super::common::Reg<regs::Ris, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1030usize) as _) }
     }
     #[doc = "Masked Interrupt Status Register."]
     #[inline(always)]
-    pub const fn mis(self) -> crate::common::Reg<regs::Mis, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1038usize) as _) }
+    pub const fn mis(self) -> super::common::Reg<regs::Mis, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1038usize) as _) }
     }
     #[doc = "Interrupt Set Register."]
     #[inline(always)]
-    pub const fn iset(self) -> crate::common::Reg<regs::Iset, crate::common::W> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1040usize) as _) }
+    pub const fn iset(self) -> super::common::Reg<regs::Iset, super::common::W> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1040usize) as _) }
     }
     #[doc = "Interrupt Clear Register."]
     #[inline(always)]
-    pub const fn iclr(self) -> crate::common::Reg<regs::Iclr, crate::common::W> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1048usize) as _) }
+    pub const fn iclr(self) -> super::common::Reg<regs::Iclr, super::common::W> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1048usize) as _) }
     }
     #[doc = "Event Mode."]
     #[inline(always)]
-    pub const fn evt_mode(self) -> crate::common::Reg<regs::EvtMode, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x10e0usize) as _) }
+    pub const fn evt_mode(self) -> super::common::Reg<regs::EvtMode, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x10e0usize) as _) }
     }
     #[doc = "Hardware Version Description Register."]
     #[inline(always)]
-    pub const fn desc(self) -> crate::common::Reg<regs::Desc, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x10fcusize) as _) }
+    pub const fn desc(self) -> super::common::Reg<regs::Desc, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x10fcusize) as _) }
     }
     #[doc = "Command Execute Register."]
     #[inline(always)]
-    pub const fn cmdexec(self) -> crate::common::Reg<regs::Cmdexec, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1100usize) as _) }
+    pub const fn cmdexec(self) -> super::common::Reg<regs::Cmdexec, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1100usize) as _) }
     }
     #[doc = "Command Type Register."]
     #[inline(always)]
-    pub const fn cmdtype(self) -> crate::common::Reg<regs::Cmdtype, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1104usize) as _) }
+    pub const fn cmdtype(self) -> super::common::Reg<regs::Cmdtype, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1104usize) as _) }
     }
     #[doc = "Command Control Register."]
     #[inline(always)]
-    pub const fn cmdctl(self) -> crate::common::Reg<regs::Cmdctl, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1108usize) as _) }
+    pub const fn cmdctl(self) -> super::common::Reg<regs::Cmdctl, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1108usize) as _) }
     }
     #[doc = "Command Address Register."]
     #[inline(always)]
-    pub const fn cmdaddr(self) -> crate::common::Reg<u32, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1120usize) as _) }
+    pub const fn cmdaddr(self) -> super::common::Reg<u32, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1120usize) as _) }
     }
     #[doc = "Command Program Byte Enable Register."]
     #[inline(always)]
-    pub const fn cmdbyten(self) -> crate::common::Reg<regs::Cmdbyten, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1124usize) as _) }
+    pub const fn cmdbyten(self) -> super::common::Reg<regs::Cmdbyten, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1124usize) as _) }
     }
     #[doc = "Command Data Register 0."]
     #[inline(always)]
-    pub const fn cmddata0(self) -> crate::common::Reg<u32, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1130usize) as _) }
+    pub const fn cmddata0(self) -> super::common::Reg<u32, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1130usize) as _) }
     }
     #[doc = "Command Data Register 1."]
     #[inline(always)]
-    pub const fn cmddata1(self) -> crate::common::Reg<u32, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1134usize) as _) }
+    pub const fn cmddata1(self) -> super::common::Reg<u32, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1134usize) as _) }
     }
     #[doc = "Command Data Register ECC 0."]
     #[inline(always)]
-    pub const fn cmddataecc0(self) -> crate::common::Reg<regs::Cmddataecc0, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x11b0usize) as _) }
+    pub const fn cmddataecc0(self) -> super::common::Reg<regs::Cmddataecc0, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x11b0usize) as _) }
     }
     #[doc = "Command Write Erase Protect A Register."]
     #[inline(always)]
-    pub const fn cmdweprota(self) -> crate::common::Reg<u32, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x11d0usize) as _) }
+    pub const fn cmdweprota(self) -> super::common::Reg<u32, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x11d0usize) as _) }
     }
     #[doc = "Command Write Erase Protect B Register."]
     #[inline(always)]
-    pub const fn cmdweprotb(self) -> crate::common::Reg<regs::Cmdweprotb, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x11d4usize) as _) }
+    pub const fn cmdweprotb(self) -> super::common::Reg<regs::Cmdweprotb, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x11d4usize) as _) }
     }
     #[doc = "Command Write Erase Protect Non-Main Register."]
     #[inline(always)]
-    pub const fn cmdweprotnm(self) -> crate::common::Reg<regs::Cmdweprotnm, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1210usize) as _) }
+    pub const fn cmdweprotnm(self) -> super::common::Reg<regs::Cmdweprotnm, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1210usize) as _) }
     }
     #[doc = "Command Write Erase Protect Trim Register."]
     #[inline(always)]
-    pub const fn cmdweprottr(self) -> crate::common::Reg<regs::Cmdweprottr, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1214usize) as _) }
+    pub const fn cmdweprottr(self) -> super::common::Reg<regs::Cmdweprottr, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1214usize) as _) }
     }
     #[doc = "Command Write Erase Protect Engr Register."]
     #[inline(always)]
-    pub const fn cmdweproten(self) -> crate::common::Reg<regs::Cmdweproten, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1218usize) as _) }
+    pub const fn cmdweproten(self) -> super::common::Reg<regs::Cmdweproten, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1218usize) as _) }
     }
     #[doc = "Command Configuration Register."]
     #[inline(always)]
-    pub const fn cfgcmd(self) -> crate::common::Reg<regs::Cfgcmd, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13b0usize) as _) }
+    pub const fn cfgcmd(self) -> super::common::Reg<regs::Cfgcmd, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13b0usize) as _) }
     }
     #[doc = "Pulse Counter Configuration Register."]
     #[inline(always)]
-    pub const fn cfgpcnt(self) -> crate::common::Reg<regs::Cfgpcnt, crate::common::RW> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13b4usize) as _) }
+    pub const fn cfgpcnt(self) -> super::common::Reg<regs::Cfgpcnt, super::common::RW> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13b4usize) as _) }
     }
     #[doc = "Command Status Register."]
     #[inline(always)]
-    pub const fn statcmd(self) -> crate::common::Reg<regs::Statcmd, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13d0usize) as _) }
+    pub const fn statcmd(self) -> super::common::Reg<regs::Statcmd, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13d0usize) as _) }
     }
     #[doc = "Address Status Register."]
     #[inline(always)]
-    pub const fn stataddr(self) -> crate::common::Reg<regs::Stataddr, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13d4usize) as _) }
+    pub const fn stataddr(self) -> super::common::Reg<regs::Stataddr, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13d4usize) as _) }
     }
     #[doc = "Pulse Count Status Register."]
     #[inline(always)]
-    pub const fn statpcnt(self) -> crate::common::Reg<regs::Statpcnt, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13d8usize) as _) }
+    pub const fn statpcnt(self) -> super::common::Reg<regs::Statpcnt, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13d8usize) as _) }
     }
     #[doc = "Mode Status Register."]
     #[inline(always)]
-    pub const fn statmode(self) -> crate::common::Reg<regs::Statmode, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13dcusize) as _) }
+    pub const fn statmode(self) -> super::common::Reg<regs::Statmode, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13dcusize) as _) }
     }
     #[doc = "Global Information Register 0."]
     #[inline(always)]
-    pub const fn gblinfo0(self) -> crate::common::Reg<regs::Gblinfo0, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13f0usize) as _) }
+    pub const fn gblinfo0(self) -> super::common::Reg<regs::Gblinfo0, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13f0usize) as _) }
     }
     #[doc = "Global Information Register 1."]
     #[inline(always)]
-    pub const fn gblinfo1(self) -> crate::common::Reg<regs::Gblinfo1, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13f4usize) as _) }
+    pub const fn gblinfo1(self) -> super::common::Reg<regs::Gblinfo1, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13f4usize) as _) }
     }
     #[doc = "Global Information Register 2."]
     #[inline(always)]
-    pub const fn gblinfo2(self) -> crate::common::Reg<regs::Gblinfo2, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x13f8usize) as _) }
+    pub const fn gblinfo2(self) -> super::common::Reg<regs::Gblinfo2, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x13f8usize) as _) }
     }
     #[doc = "Bank Information Register 0 for Bank 0."]
     #[inline(always)]
-    pub const fn bank0info0(self) -> crate::common::Reg<regs::Bank0info0, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1400usize) as _) }
+    pub const fn bank0info0(self) -> super::common::Reg<regs::Bank0info0, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1400usize) as _) }
     }
     #[doc = "Bank Information Register 1 for Bank 0."]
     #[inline(always)]
-    pub const fn bank0info1(self) -> crate::common::Reg<regs::Bank0info1, crate::common::R> {
-        unsafe { crate::common::Reg::from_ptr(self.ptr.add(0x1404usize) as _) }
+    pub const fn bank0info1(self) -> super::common::Reg<regs::Bank0info1, super::common::R> {
+        unsafe { super::common::Reg::from_ptr(self.ptr.add(0x1404usize) as _) }
     }
 }
 pub mod regs {

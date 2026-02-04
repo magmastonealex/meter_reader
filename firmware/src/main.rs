@@ -32,64 +32,17 @@ use embedded_can::{Frame, Id, StandardId};
 
 use defmt::{info, warn};
 
-// Hack for flashctl support before upstream support.
-mod common;
-mod flashctl;
-
-pub const FLASHCTL: flashctl::Flashctl = unsafe {
-    flashctl::Flashctl::from_ptr(1074581504 as *mut _)
-};
+mod flashdriver;
 
 use defmt_rtt as _;
 
-use crate::flashctl::regs::{Cmdbyten, Cmdexec, Cmdweprotb};
-use crate::flashctl::vals::{Cmddone, Cmdpass, Failweprot};
+use panic_probe as _;
+
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
     CANFD0 => can::InterruptHandler<CANFD0>;
 });
 
-#[unsafe(link_section = ".data")] // <- the important part
-#[inline(never)] // you don't want this to be inlined, right?
-#[unsafe(no_mangle)]
-extern "C" fn flashctl_pgm() {
-    FLASHCTL.cmdexec().write_value(Cmdexec(0x01));
-
-    while FLASHCTL.statcmd().read().cmddone() != Cmddone::STATDONE {
-    }
-}
-
-fn flashctl_write() {
-    FLASHCTL.cmdweprotb().write_value(Cmdweprotb(120u32));
-    FLASHCTL.cmdaddr().write_value(0x0001_E000);
-    FLASHCTL.cmdctl().modify(|w| { // DS is wrong? many fields missing from SVD.
-        w.set_eccgenovr(false);
-    });
-    FLASHCTL.cmdbyten().write_value(Cmdbyten(0x1FF)); // DS is wrong - actually a 9 bit value not 8 bit.
-    FLASHCTL.cmddata0().write_value(0xABCD_EF01);
-    FLASHCTL.cmddata1().write_value(0x1234_5678);
-    FLASHCTL.cmdtype().write(|w| {
-        w.set_command(flashctl::vals::Command::PROGRAM);
-        w.set_size(flashctl::vals::Size::ONEWORD);
-    });
-
-    
-
-    // The software sequence of setting the CMDEXEC bit and waiting for the CMDDONE response must be executed
-    // from either the device SRAM or from a different flash bank from the bank that is being operated on, as the
-    // flash controller will take control of the flash bank undergoing the operation. Reads to the flash bank that is being
-    // operated on while the flash controller is executing the command are not predictable.
-
-    // these bits need to be done in asm or ramfunc or something.
-    flashctl_pgm();
-}
-
-//mod cancontroller;
-// 1K sector size
-// 64 bit word size
-// ideal case is write an entire 64 bit word at once
-// if you don't, you have to read it back through non ECC alias so you don't trigger faults.
-// 0x0001E000
 
 fn uart_ll_write(buffer: &[u8]) {
     for &b in buffer {
@@ -100,13 +53,12 @@ fn uart_ll_write(buffer: &[u8]) {
         });
     }
 
-    
 }
 
 // This panic handler dumps stuff to UART.
 // Note this is not particularly code-size efficient as it brings in a lot of formatting garbage just for panics (>> 10KB).
 // This is fine for development where panics are possible, but should really be disabled in production releases.
-#[panic_handler]
+/*#[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     static PANICKED: AtomicBool = AtomicBool::new(false);
 
@@ -134,7 +86,7 @@ fn panic(info: &PanicInfo) -> ! {
     loop {
         // hope you remembered to set a watchdog.
     }
-}
+}*/
 
 /// Hardfault handler.
 ///
@@ -242,7 +194,6 @@ async fn main(spawner: Spawner) -> ! {
 
     let canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
 
-    flashctl_write();
     // TRM says that TRACEID is unique per part shipped,
     // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
     // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
@@ -258,8 +209,9 @@ async fn main(spawner: Spawner) -> ! {
     config.baudrate = 115200;
 
     //let mut uart = Uart::new_blocking(periph.UART0, rx, tx, config).unwrap();
-    let uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
+    let mut uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
 
+    uart.blocking_write("done\r\n".as_bytes()).unwrap();
     info!("Init completed");
     embassy_time::Timer::after(Duration::from_millis(100)).await;  
 
@@ -272,8 +224,22 @@ async fn main(spawner: Spawner) -> ! {
     
     //i2c_scan(&mut i2cinter).await;
 
-    // need to zero this somehow - unsafe?
+    let mut controller = flashdriver::FlashController::new(flashdriver::take().unwrap());
 
+    let mut tmpdat = [0x0u8; 16];
+    
+    // TODO: Find a way to catch ECC errors and do something productive (panic?)
+    // I'm not sure if that's possible with the way embassy-mspm0 does things right now.
+    // should probably reset?
+    controller.ll_read(0x0001_E000, &mut tmpdat);
+    info!("initial read: {:02x}", tmpdat);
+    controller.ll_erase(0x0001_E000).unwrap();
+    controller.ll_read(0x0001_E000, &mut tmpdat);
+    info!("Second read: {:02x}", tmpdat);
+    controller.ll_write(0x0001_E000, [0x8989_3434, 0xAA55_2233]).unwrap();
+    controller.ll_write(0x0001_E008, [0xDEAD_BEEF, 0xBAAD_F00D]).unwrap();
+    controller.ll_read(0x0001_E000, &mut tmpdat);
+    info!("Third read: {:02x}", tmpdat);
 
     let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, can::Config::default()).unwrap();
     let (tx, rx, status) = candriver.split();
@@ -285,9 +251,9 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut outgoing = OUTBOUND.dyn_sender();
 
+    // or 0x10
     let mut mlx = Mlx90394::new_init(i2cinter, 0x10).await.unwrap();
 
-    info!("initialized mlx");
     loop {
         /*if s2.is_low() {
             led_output_2.set_high();
