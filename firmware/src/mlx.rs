@@ -2,6 +2,77 @@
 use defmt::info;
 use embedded_hal_async::i2c::{I2c};
 
+#[derive(Debug, PartialEq, Eq, defmt::Format)]
+pub struct MagReadings {
+    pub x: i16,
+    pub y: i16,
+    pub z: i16,
+
+    /// Temperature in "deci-degrees celcius".
+    pub temp_deci_c: i16,
+
+    pub x_sat: bool,
+    pub y_sat: bool,
+    pub z_sat: bool,
+    pub overflowed: bool
+}
+
+impl MagReadings {
+    fn from_raw(main_data: [u8; 7], temp_data: [u8; 2]) -> Self {
+        let mut data = MagReadings{
+            x: i16::from_be_bytes(main_data[0..2].try_into().unwrap()),
+            y: i16::from_be_bytes(main_data[2..4].try_into().unwrap()),
+            z: i16::from_be_bytes(main_data[4..6].try_into().unwrap()),
+            temp_deci_c: i16::from_be_bytes(temp_data),
+
+            x_sat: false,
+            y_sat: false,
+            z_sat: false,
+            overflowed: false
+        };
+
+        if (main_data[6] & 0x01) != 0 {
+            data.x_sat = true;
+        }
+        if (main_data[6] & 0x02) != 0 {
+            data.y_sat = true;
+        }
+        if (main_data[6] & 0x04) != 0 {
+            data.y_sat = true;
+        }
+        if (main_data[6] & 0x08) != 0 {
+            data.overflowed = true;
+        }
+
+        data
+    }
+
+    pub fn serialize(&self) -> [u8; 8] {
+        let mut result = [0u8; 8];
+        // X field (bytes 0-1)
+        result[0..2].copy_from_slice(&self.x.to_be_bytes());
+
+        // Y field (bytes 2-3)
+        result[2..4].copy_from_slice(&self.y.to_be_bytes());
+
+        // Z field (bytes 4-5)
+        result[4..6].copy_from_slice(&self.z.to_be_bytes());
+
+        // Temperature (byte 6) - divide by 10 to convert deci-degrees to degrees
+        result[6] = (self.temp_deci_c / 10) as i8 as u8;
+
+        // Status bitfield (byte 7)
+        let mut status = 0u8;
+        if self.x_sat { status |= 0x01; }
+        if self.y_sat { status |= 0x02; }
+        if self.z_sat { status |= 0x04; }
+        if self.overflowed { status |= 0x08; }
+        result[7] = status;
+
+        result
+    }
+}
+
 pub struct Mlx90394<I2C> {
     i2c: I2C,
     address: u8,
@@ -31,7 +102,7 @@ const REG_Y_THR_MSB: u8 = 0x5B;
 const REG_Z_THR_LSB: u8 = 0x5C;
 const REG_Z_THR_MSB: u8 = 0x5D;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
 pub enum MlxError<E> {
     /// I2C communication error
     I2c(E),
@@ -82,7 +153,7 @@ where
 
         let ctrl2:u8  = (1 << 6) | // CONFIG0 = 1 - configuration 1 for high range
             (1 << 3); // Interrupt on INTB pin (will use for dready to avoid polling i2c.)
-        
+
         inst.write_register(REG_CTRL2, ctrl2).await?;
 
 
@@ -107,7 +178,7 @@ where
             (1<<4) | // x axis enabled
             (2<<0); // 5 Hz continous measurements.
         inst.write_register(REG_CTRL1, ctrl1).await?;
-        
+
 
         Ok(inst)
     }
@@ -125,6 +196,23 @@ where
         self.read_registers(REG_X_LSB, test).await?;
 
         Ok(())
+    }
+
+    pub async fn get_reading(&mut self) -> Result<MagReadings, MlxError<E>> {
+        let mut main_data = [0x0u8; 7];
+        let mut temp_data = [0x0u8; 2];
+
+        self.read_registers(REG_X_LSB, &mut main_data).await?;
+        self.read_registers(REG_T_LSB, &mut temp_data).await?;
+
+        Ok(MagReadings::from_raw(main_data, temp_data))
+    }
+
+    pub async fn get_temperature(&mut self) -> Result<i16, MlxError<E>> {
+        let mut data = [0x0u8; 2];
+        self.read_registers(REG_T_LSB, &mut data).await?;
+
+        Ok(i16::from_be_bytes(data))
     }
 
     async fn write_register(&mut self, reg: u8, value: u8) -> Result<(), MlxError<E>> {

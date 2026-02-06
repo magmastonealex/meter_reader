@@ -26,6 +26,7 @@ use embassy_time::{Duration, Timer};
 
 use embassy_executor::Spawner;
 
+use embedded_storage_async::nor_flash::{NorFlash, ReadNorFlash};
 use mlx::Mlx90394;
 
 use embedded_can::{Frame, Id, StandardId};
@@ -37,6 +38,8 @@ mod flashdriver;
 use defmt_rtt as _;
 
 use panic_probe as _;
+use sequential_storage::cache::NoCache;
+use sequential_storage::map::{MapConfig, MapStorage};
 
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
@@ -224,22 +227,33 @@ async fn main(spawner: Spawner) -> ! {
     
     //i2c_scan(&mut i2cinter).await;
 
-    let mut controller = flashdriver::FlashController::new(flashdriver::take().unwrap());
+    let controller = flashdriver::FlashController::new(flashdriver::take().unwrap(), 0x0001_E000, 0x0002_0000);
 
-    let mut tmpdat = [0x0u8; 16];
+
+
+    // I think we have all (most) of the primitives we need.
+    // Now to tie it together.
+    // 
     
-    // TODO: Find a way to catch ECC errors and do something productive (panic?)
-    // I'm not sure if that's possible with the way embassy-mspm0 does things right now.
-    // should probably reset?
-    controller.ll_read(0x0001_E000, &mut tmpdat);
-    info!("initial read: {:02x}", tmpdat);
-    controller.ll_erase(0x0001_E000).unwrap();
-    controller.ll_read(0x0001_E000, &mut tmpdat);
-    info!("Second read: {:02x}", tmpdat);
-    controller.ll_write(0x0001_E000, [0x8989_3434, 0xAA55_2233]).unwrap();
-    controller.ll_write(0x0001_E008, [0xDEAD_BEEF, 0xBAAD_F00D]).unwrap();
-    controller.ll_read(0x0001_E000, &mut tmpdat);
-    info!("Third read: {:02x}", tmpdat);
+    //controller.erase(0x0001E000, 0x00020000).await.unwrap();
+
+    let mut storage = MapStorage::<u8, _, _>::new(controller, const { MapConfig::new(0x0001E000..0x00020000) }, NoCache::new());
+
+    let mut tmpbuf = [0x0u8; 80];
+    let result = storage.fetch_item::<[u8; 3]>(&mut tmpbuf, &0x01).await;
+    match result {
+        Ok(Some(v)) => {
+            defmt::info!("Got value: {:02x}", v);
+        }
+        Ok(None) => {
+            defmt::warn!("No value found!");
+        }
+        Err(e) => {
+            defmt::error!("Failed to fetch item: {}", e);
+        }
+    }
+
+    storage.store_item::<[u8; 3]>(&mut tmpbuf, &0x01, &[0x05, 0x10, 0xAB]).await.unwrap();
 
     let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, can::Config::default()).unwrap();
     let (tx, rx, status) = candriver.split();
@@ -265,12 +279,23 @@ async fn main(spawner: Spawner) -> ! {
 
         //if mlx.data_ready().await.unwrap() {
             led_output.toggle();
-            let mut magdata = [0x0u8; 7];
-            mlx.dump_data(&mut magdata).await.unwrap();
-            let frame =
-                can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x129).unwrap()), &magdata)
-                    .unwrap();
-            outgoing.send(frame).await;
+            match mlx.get_reading().await {
+                Ok(data) => {
+                    defmt::info!("Got readings: {:?}", data);
+                    //let magdata = data.serialize();
+                    //let frame =
+                    //can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x129).unwrap()), &magdata)
+                    //    .unwrap();
+                    //outgoing.send(frame).await;
+                }
+                Err(e) => {
+                    defmt::warn!("failed to read: {}", e);
+                } 
+            }
+            
+
+
+            
         //}
 
     } 
