@@ -221,7 +221,7 @@ async fn main(spawner: Spawner) -> ! {
     //let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, i2c::Config::default()).unwrap();
     let mut cfg = i2c::Config::default();
     cfg.bus_speed = i2c::BusSpeed::FastMode;
-    let i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, cfg).unwrap();
+    let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, cfg).unwrap();
 
     info!("was OK");
     
@@ -233,7 +233,16 @@ async fn main(spawner: Spawner) -> ! {
 
     // I think we have all (most) of the primitives we need.
     // Now to tie it together.
-    // 
+    // - MLX reading works, and can configure different rates and stuff. Interrupt being separate is awkward tho. Can probably work around that?
+    // - CAN is great.
+    // - sequential-storage seems to be working well too.
+    // Now we need a protocol which sends periodic hellos,
+    // allows configuring into "data dump" mode at 5hz which dumps values to CAN.
+    // Allows configuring the high/low range.
+    // Once an axis and level is determined, allows setting the desired axis and threshold.
+    // Once in "running" mode, monitors for sinusoidal input and sends outwards as a current count.
+    // Count is stored in flash every 10 minutes if changed (count the # of iterations there....) so we don't lose
+    // too much usage (or should this high-water mark be stored somewhere else?)
     
     //controller.erase(0x0001E000, 0x00020000).await.unwrap();
 
@@ -266,7 +275,17 @@ async fn main(spawner: Spawner) -> ! {
     let mut outgoing = OUTBOUND.dyn_sender();
 
     // or 0x10
-    let mut mlx = Mlx90394::new_init(i2cinter, 0x10).await.unwrap();
+    let mut config = const {mlx::Config::new(2).unwrap()};
+    config.high_sensitivity = true;
+    let mut mlx = loop {
+        if let Ok(res) = Mlx90394::new_init(&mut i2cinter, 0x10, &config).await {
+            break res
+        } else {
+            info!("Failed. Trying again...");
+            Timer::after_millis(100).await;
+        }
+    };
+    info!("Initialized");
 
     loop {
         /*if s2.is_low() {
@@ -276,12 +295,11 @@ async fn main(spawner: Spawner) -> ! {
         }*/
 
         s2.wait_for_falling_edge().await;
-
         //if mlx.data_ready().await.unwrap() {
             led_output.toggle();
             match mlx.get_reading().await {
                 Ok(data) => {
-                    defmt::info!("Got readings: {:?}", data);
+                    info!("Got readings: {:?}", data);
                     //let magdata = data.serialize();
                     //let frame =
                     //can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x129).unwrap()), &magdata)

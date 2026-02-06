@@ -8,9 +8,6 @@ pub struct MagReadings {
     pub y: i16,
     pub z: i16,
 
-    /// Temperature in "deci-degrees celcius".
-    pub temp_deci_c: i16,
-
     pub x_sat: bool,
     pub y_sat: bool,
     pub z_sat: bool,
@@ -18,12 +15,11 @@ pub struct MagReadings {
 }
 
 impl MagReadings {
-    fn from_raw(main_data: [u8; 7], temp_data: [u8; 2]) -> Self {
+    fn from_raw(main_data: [u8; 7]) -> Self {
         let mut data = MagReadings{
-            x: i16::from_be_bytes(main_data[0..2].try_into().unwrap()),
-            y: i16::from_be_bytes(main_data[2..4].try_into().unwrap()),
-            z: i16::from_be_bytes(main_data[4..6].try_into().unwrap()),
-            temp_deci_c: i16::from_be_bytes(temp_data),
+            x: i16::from_le_bytes(main_data[0..2].try_into().unwrap()),
+            y: i16::from_le_bytes(main_data[2..4].try_into().unwrap()),
+            z: i16::from_le_bytes(main_data[4..6].try_into().unwrap()),
 
             x_sat: false,
             y_sat: false,
@@ -44,11 +40,12 @@ impl MagReadings {
             data.overflowed = true;
         }
 
+        //defmt::info!("Readings X: {:016b} Y: {:b} Z: {:016b} D: {:08b}", data.x, data.y, data.z, main_data[6]);
         data
     }
 
-    pub fn serialize(&self) -> [u8; 8] {
-        let mut result = [0u8; 8];
+    pub fn serialize(&self) -> [u8; 7] {
+        let mut result = [0u8; 7];
         // X field (bytes 0-1)
         result[0..2].copy_from_slice(&self.x.to_be_bytes());
 
@@ -58,23 +55,20 @@ impl MagReadings {
         // Z field (bytes 4-5)
         result[4..6].copy_from_slice(&self.z.to_be_bytes());
 
-        // Temperature (byte 6) - divide by 10 to convert deci-degrees to degrees
-        result[6] = (self.temp_deci_c / 10) as i8 as u8;
-
         // Status bitfield (byte 7)
         let mut status = 0u8;
         if self.x_sat { status |= 0x01; }
         if self.y_sat { status |= 0x02; }
         if self.z_sat { status |= 0x04; }
         if self.overflowed { status |= 0x08; }
-        result[7] = status;
+        result[6] = status;
 
         result
     }
 }
 
-pub struct Mlx90394<I2C> {
-    i2c: I2C,
+pub struct Mlx90394<'a, I2C> {
+    i2c: &'a mut I2C,
     address: u8,
 }
 
@@ -123,12 +117,35 @@ impl<E> From<E> for MlxError<E> {
     }
 }
 
+pub struct Config {
+    pub high_sensitivity: bool,
+    pub en_z: bool,
+    pub en_x: bool,
+    pub en_y: bool,
+    rate: u8,
+}
 
-impl<I2C, E> Mlx90394<I2C>
+impl Config {
+    pub const fn new(rate: u8) -> Option<Config> {
+        if rate >= 15 || rate == 0 || rate == 1 || rate == 7 || rate == 8 || rate == 9 {
+            return None;
+        }
+
+        Some(Config {
+            high_sensitivity: false,
+            en_x: true,
+            en_y: true,
+            en_z: true,
+            rate: rate
+        })
+    }
+}
+
+impl<'a, I2C, E> Mlx90394<'a, I2C>
 where
     I2C: I2c<Error = E>,
 {
-    pub async fn new_init(i2c: I2C, address: u8) -> Result<Self, MlxError<E>> {
+    pub async fn new_init(i2c: &'a mut I2C, address: u8, config: &Config) -> Result<Self, MlxError<E>> {
         let mut inst = Self {
             i2c,
             address
@@ -143,25 +160,36 @@ where
         }
 
         inst.write_register(REG_RESET, 0x06).await?;
-
-
         let stat1 = inst.read_register(REG_STAT1).await?;
         if stat1 & (1<<3) == 0 {
             // not reset?
             info!("not reset - something weird happened");
         }
 
-        let ctrl2:u8  = (1 << 6) | // CONFIG0 = 1 - configuration 1 for high range
-            (1 << 3); // Interrupt on INTB pin (will use for dready to avoid polling i2c.)
+        inst.reconfigure(config).await?;
 
-        inst.write_register(REG_CTRL2, ctrl2).await?;
+        Ok(inst)
+    }
 
+    pub async fn reconfigure(&mut self, config: &Config) -> Result<(), MlxError<E>> {
+        // stop measurements.
+        let ctrl1: u8 = 0; // disable everything.
+        self.write_register(REG_CTRL1, ctrl1).await?;
+
+        let mut ctrl2: u8  = 1 << 3; // Interrupt on INTB pin (will use for dready to avoid polling i2c.)
+        if config.high_sensitivity {
+            ctrl2 |= 1 << 7;  // CONFIG1 = 1 - configuration 2 for high sensitivity
+        } else {
+            ctrl2 |= 1 << 6; // CONFIG0 = 1 - configuration 1 for high range
+        }
+
+        self.write_register(REG_CTRL2, ctrl2).await?;
 
         let ctrl3:u8 = (1 << 7) | // enable oversampling for hall measurements
             (1 << 6) | // Enable oversampling for temperature measurements
             (6 << 3) | // Enable 4 filter taps for XY hall effect measurement - see https://github.com/zephyrproject-rtos/zephyr/blob/4f3478391a3c5e555dcd629f9e829378c17b0d62/drivers/sensor/melexis/mlx90394/mlx90394.c#L28 - this will take 490 us per axis.
             (6 << 0); // Enable 4 filter taps for temperature measurement.
-        inst.write_register(REG_CTRL3, ctrl3).await?;
+        self.write_register(REG_CTRL3, ctrl3).await?;
 
         let ctrl4: u8 = (1 << 7) | // rsvd
             (0<<6) | // rsvd
@@ -170,17 +198,23 @@ where
             (1<<3) | // drdy output on intb
             (6<<0); // 4 filter taps for Z hall effect measurement.
 
-        inst.write_register(REG_CTRL4, ctrl4).await?;
+        self.write_register(REG_CTRL4, ctrl4).await?;
 
         // start continous measurements.
-        let ctrl1: u8 = (1<<6) | // z axis enabled
-            (1<<5) | // y axis enabled
-            (1<<4) | // x axis enabled
-            (2<<0); // 5 Hz continous measurements.
-        inst.write_register(REG_CTRL1, ctrl1).await?;
+        let mut ctrl1: u8 = config.rate; // continous measurements.
+        if config.en_z {
+            ctrl1 |= 1<<6;
+        }
+        if config.en_x {
+            ctrl1 |= 1<<4;
+        }
+        if config.en_y {
+            ctrl1 |= 1<<5;
+        }
+            
+        self.write_register(REG_CTRL1, ctrl1).await?;
 
-
-        Ok(inst)
+        Ok(())
     }
 
     pub async fn data_ready(&mut self) -> Result<bool, MlxError<E>> {
@@ -199,13 +233,16 @@ where
     }
 
     pub async fn get_reading(&mut self) -> Result<MagReadings, MlxError<E>> {
-        let mut main_data = [0x0u8; 7];
-        let mut temp_data = [0x0u8; 2];
+        let mut main_data = [0x0u8; 8];
 
-        self.read_registers(REG_X_LSB, &mut main_data).await?;
-        self.read_registers(REG_T_LSB, &mut temp_data).await?;
+        // this data is semi-garbage.
+        // I wonder if it's being treated as a "direct read" somehow and starting from 0x00,
+        // ^ yep - LA proves that there's a stop, then a delay, then a new start,
+        // so the magnetometer misbehaves and doesn't reliably read correct data.
+        // I think this is why reading the company ID also didn't always work.
+        self.read_registers_base(&mut main_data).await?;
 
-        Ok(MagReadings::from_raw(main_data, temp_data))
+        Ok(MagReadings::from_raw(main_data[1..8].try_into().unwrap()))
     }
 
     pub async fn get_temperature(&mut self) -> Result<i16, MlxError<E>> {
@@ -225,8 +262,13 @@ where
         self.i2c.write_read(self.address, &[reg], &mut buf).await?;
         Ok(buf[0])
     }
-
+    async fn read_registers_base(&mut self, buf: &mut [u8]) -> Result<(), MlxError<E>> {
+        self.i2c.read(self.address, buf).await?;
+        Ok(())
+    }
     async fn read_registers(&mut self, start_reg: u8, buf: &mut [u8]) -> Result<(), MlxError<E>> {
+        // note: write_read does a write, then a read, but there's not technically a true _repeated start_
+        // which causes many devices to misbehave when reading registers. This is a driver bug in i2c.
         self.i2c.write_read(self.address, &[start_reg], buf).await?;
         Ok(())
     }
