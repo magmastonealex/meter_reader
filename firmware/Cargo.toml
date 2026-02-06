@@ -21,7 +21,7 @@ cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
 cortex-m-rt = "0.7"
 defmt = "1.0.1"
 defmt-rtt = { version = "1.0.0", features = [] } #// "disable-blocking-mode"
-panic-probe = { version = "1.0"}
+panic-probe = { version = "1.0", features = ["print-defmt"]}
 semihosting = "0.1.20"
 
 # note - feature is misspelled in upstream?
@@ -38,6 +38,8 @@ derive-mmio = { version = "0.6.1", features = ["defmt"]}
 bitbybit = "1.4.0"
 arbitrary-int = { version = "2.0.0", features = ["defmt"] }
 embedded-can = "0.4.1"
+embedded-storage-async = "0.4.1"
+sequential-storage = { version = "7.1.0", features = ["defmt"] }
 
 #[patch.'https://github.com/mspm0-rs/mspm0-data-generated/']
 #mspm0-metapac = { path = "/home/alex/mspm0-data/build/mspm0-metapac/" }
