@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use defmt::info;
+use embassy_mspm0::gpio::Input;
 use embedded_hal_async::i2c::{I2c};
 
 #[derive(Debug, PartialEq, Eq, defmt::Format)]
@@ -67,8 +68,9 @@ impl MagReadings {
     }
 }
 
-pub struct Mlx90394<'a, I2C> {
+pub struct Mlx90394<'a, 'b, I2C> {
     i2c: &'a mut I2C,
+    drdy: &'a mut Input<'b>,
     address: u8,
 }
 
@@ -141,13 +143,14 @@ impl Config {
     }
 }
 
-impl<'a, I2C, E> Mlx90394<'a, I2C>
+impl<'a, 'b, I2C, E> Mlx90394<'a, 'b, I2C>
 where
     I2C: I2c<Error = E>,
 {
-    pub async fn new_init(i2c: &'a mut I2C, address: u8, config: &Config) -> Result<Self, MlxError<E>> {
+    pub async fn new_init(i2c: &'a mut I2C, drdy: &'a mut Input<'b>, address: u8,  config: &Config) -> Result<Self, MlxError<E>> {
         let mut inst = Self {
             i2c,
+            drdy,
             address
         };
 
@@ -234,12 +237,13 @@ where
 
     pub async fn get_reading(&mut self) -> Result<MagReadings, MlxError<E>> {
         let mut main_data = [0x0u8; 8];
-
+        self.drdy.wait_for_low().await;
+        
         // this data is semi-garbage.
         // I wonder if it's being treated as a "direct read" somehow and starting from 0x00,
         // ^ yep - LA proves that there's a stop, then a delay, then a new start,
         // so the magnetometer misbehaves and doesn't reliably read correct data.
-        // I think this is why reading the company ID also didn't always work.
+        // I think this is why reading the company ID also didn't always work reliably.
         self.read_registers_base(&mut main_data).await?;
 
         Ok(MagReadings::from_raw(main_data[1..8].try_into().unwrap()))
