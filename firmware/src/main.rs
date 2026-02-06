@@ -233,9 +233,11 @@ async fn main(spawner: Spawner) -> ! {
 
     // I think we have all (most) of the primitives we need.
     // Now to tie it together.
-    // - MLX reading works, and can configure different rates and stuff. Interrupt being separate is awkward tho. Can probably work around that?
+    // - MLX reading works, and can configure different rates and stuff.  It would be _nice_ to fix the i2c thing but it doesn't seem mandatory, especially if we disable the company check for now.
     // - CAN is great.
     // - sequential-storage seems to be working well too.
+    // We should fix all the unwraps to gracefully degrade if needed.
+    // Send a "uh oh" message on CAN instead of the hello if something fails to initialize correctly.
     // Now we need a protocol which sends periodic hellos,
     // allows configuring into "data dump" mode at 5hz which dumps values to CAN.
     // Allows configuring the high/low range.
@@ -278,7 +280,7 @@ async fn main(spawner: Spawner) -> ! {
     let mut config = const {mlx::Config::new(2).unwrap()};
     config.high_sensitivity = true;
     let mut mlx = loop {
-        if let Ok(res) = Mlx90394::new_init(&mut i2cinter, 0x10, &config).await {
+        if let Ok(res) = Mlx90394::new_init(&mut i2cinter, &mut s2, 0x10, &config).await {
             break res
         } else {
             info!("Failed. Trying again...");
@@ -294,7 +296,6 @@ async fn main(spawner: Spawner) -> ! {
             led_output_2.set_low();
         }*/
 
-        s2.wait_for_falling_edge().await;
         //if mlx.data_ready().await.unwrap() {
             led_output.toggle();
             match mlx.get_reading().await {
