@@ -6,11 +6,14 @@ mod mlx;
 use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 
+use embassy_futures::select::{Either, select};
 use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
 use embassy_mspm0::mode::Async;
 use embassy_mspm0::gpio::Output;
+use embassy_sync::lazy_lock::LazyLock;
 
+use embassy_mspm0::wwdt::{self, Watchdog};
 use embassy_mspm0::{bind_interrupts, can};
 use embassy_mspm0::i2c::{self};
 use embassy_mspm0::peripherals::{I2C1, CANFD0};
@@ -22,24 +25,30 @@ use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
 use embedded_io_async::Write;
 
 use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Instant, Timer};
 
 use embassy_executor::Spawner;
 
 use embedded_storage_async::nor_flash::{NorFlash, ReadNorFlash};
 use mlx::Mlx90394;
 
-use embedded_can::{Frame, Id, StandardId};
+use embedded_can::{ExtendedId, Frame, Id, StandardId};
 
-use defmt::{info, warn};
+use defmt::{error, info, warn};
 
 mod flashdriver;
+mod configutils;
 
 use defmt_rtt as _;
+
+mod pulse_counter;
 
 use panic_probe as _;
 use sequential_storage::cache::NoCache;
 use sequential_storage::map::{MapConfig, MapStorage};
+
+use crate::configutils::MagnetometerConfig;
+use crate::pulse_counter::PulseCounter;
 
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
@@ -56,6 +65,103 @@ fn uart_ll_write(buffer: &[u8]) {
         });
     }
 
+}
+
+#[allow(dead_code)]
+#[derive(Debug, defmt::Format, PartialEq, Eq)]
+#[repr(u8)]
+enum MessageType {
+    /// A notification that a device reset for some reason.
+    DeviceReset = 0x0F,
+
+    /// The device has encountered a fatal error.
+    DeviceError = 0x00,
+
+    /// The device has taken your request into account.
+    DeviceAck = 0x01,
+    /// The device wasn't able to apply a config or debug mode that was requested.
+    DeviceWarning = 0x02,
+    
+    /// A notification that a device is still alive.
+    DeviceHello = 0x10,
+
+    /// Sensor reading from this device?
+    DeviceRawData = 0x11,
+    
+    /// Sensor reading from this device?
+    DeviceMeterTicks = 0x12,
+
+    /// If the device has encountered a pulse (indicating some flow) in the past minute.
+    DeviceMeterActive = 0x13,
+
+    /// Request device enter debug mode to dump data at 5hz.
+    DeviceDebugMode = 0x20,
+
+    DeviceReconfigure = 0x21,
+
+    DeviceSetStartPoint = 0x22,
+    DevicePleaseReset = 0x23,
+}
+
+impl TryFrom<u8> for MessageType {
+    type Error = ();
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0x0F => Ok(MessageType::DeviceReset),
+            0x00 => Ok(MessageType::DeviceError),
+            0x10 => Ok(MessageType::DeviceHello),
+            0x11 => Ok(MessageType::DeviceRawData),
+            0x12 => Ok(MessageType::DeviceMeterTicks),
+            0x20 => Ok(MessageType::DeviceDebugMode),
+            0x21 => Ok(MessageType::DeviceReconfigure),
+            0x22 => Ok(MessageType::DeviceSetStartPoint),
+            0x23 => Ok(MessageType::DevicePleaseReset),
+            _ => Err(())
+        }
+    }
+}
+
+static DEVICE_ADDR_SUFFIX: LazyLock<u32> = LazyLock::new(|| {
+    // addr prefix is the traceid masked to a 21 bit value, leaving the upper 8 bits of a CAN address free.
+    // This allows arbitration to work based on message type, but also ensures the values are unique.
+    let traceid: u32 = unsafe{ core::ptr::read_volatile((0x41C4_0000) as *const u32) };
+
+    // TRM says that TRACEID is unique per part shipped,
+    // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
+    // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
+    info!("traceid: {:08x}", traceid);
+    traceid & (0x1FFFFF)
+});
+
+const fn get_can_id(device_suffix: u32, message_type: MessageType) -> ExtendedId {
+    let typ: u8 = message_type as u8;
+    let extid = (device_suffix & 0x1FFFFF) | ((typ as u32) << 21);
+
+    ExtendedId::new(extid).unwrap()
+}
+
+fn is_for_device(frame: &MCanFrame) -> bool {
+    if let Id::Extended(e) = frame.id() {
+        (e.as_raw() & 0x1FFFFF) == *DEVICE_ADDR_SUFFIX.get()
+    } else {
+        false
+    }
+}
+
+fn get_message_type(frame: &MCanFrame) -> Option<MessageType> {
+    if let Id::Extended(e) = frame.id() {
+        match MessageType::try_from((e.as_raw() >> 21) as u8) {
+            Ok(typ) => {
+                Some(typ)
+            },
+            Err(_) => {
+                None
+            }
+        }
+
+    } else {
+        None
+    }
 }
 
 // This panic handler dumps stuff to UART.
@@ -100,47 +206,26 @@ fn panic(info: &PanicInfo) -> ! {
 unsafe fn HardFault(_frame: &cortex_m_rt::ExceptionFrame) -> ! {
     panic!("Got a HardFault");
 }
-/*
-pub async fn i2c_scan<I>(i2c: &mut I) -> ()
-where
-    I: I2c,
-    // We require the Error type to implement the embedded_hal Error trait
-    // so we can distinguish between NACK (no device) and actual Bus Errors.
-    I::Error: I2cError, 
-{
-    defmt::info!("Starting I2C Scan...");
-    
-    for addr in 0x01..0x7F {
-        let mut tmp = [0u8; 1];
-        match i2c.read(addr, &mut tmp).await {
-            Ok(_) => {
-                defmt::info!("Found device at address: {=u8:#04x}", addr);
-            }
-            Err(e) if matches!(e.kind(), ErrorKind::NoAcknowledge(_)) => {
-                defmt::warn!("Error probing address {=u8:#04x}: bus error", addr);
-            },
-            Err(_) => {
-                defmt::warn!("Other error probing address {=u8:#04x}", addr);
-            }
-        }
-    }
 
-    defmt::info!("I2C Scan complete.");
-}
-     */
 static OUTBOUND: Channel<ThreadModeRawMutex, MCanFrame, 10> = Channel::new();
+
+static IS_METER_ACTIVE: AtomicBool = AtomicBool::new(false);
 
 #[embassy_executor::task]
 async fn periodic_hello(outgoing: DynamicSender<'static, MCanFrame>) {
+    let id = get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceHello);
     loop {
-        Timer::after_secs(5).await;
-
-        for number in 1u8..1 {
-            let frame =
-                can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x123).unwrap()), &[0x12u8, 0x34, number])
-                    .unwrap();
-            outgoing.send(frame).await;
-            info!("Sent hello frame!");
+        let mut data = [0x00u8; 2];
+        if IS_METER_ACTIVE.load(Ordering::Relaxed) {
+            data[1] = 0x01;
+        }
+        Timer::after_secs(10).await;
+        let frame = MCanFrame::new(Id::Extended(id), &data).unwrap();
+        match outgoing.try_send(frame) {
+            Ok(_) => {},
+            Err(_) => {
+                warn!("failed to send hello - queue full?");
+            }
         }
     }
 }
@@ -188,134 +273,347 @@ async fn can_maintainer(mut status: can::CanStatus<'static>) {
 }
 
 
+async fn send_error_and_panic(reason: u8, outgoing: &DynamicSender<'_, MCanFrame>) -> ! {
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceError)), &[0x00, reason]).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            panic!("init panic: {} - failed send", reason);
+        }
+    }
+    Timer::after_millis(100).await;
+    panic!("init panic: {}", reason);
+}
+
+fn try_send_warning(reason: u8, outgoing: &DynamicSender<'_, MCanFrame>) {
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceWarning)), &[0x00, reason]).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            warn!("failed to send warning");
+        }
+    }
+}
+
+fn try_send_ack(reason: u8, outgoing: &DynamicSender<'_, MCanFrame>) {
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceAck)), &[0x00, reason]).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            warn!("failed to send ack");
+        }
+    }
+}
+
+fn try_send_count(ticks: u32, outgoing: &DynamicSender<'_, MCanFrame>) {
+    let mut dataframe = [0x00u8; 5];
+
+    dataframe[1..5].copy_from_slice(&ticks.to_be_bytes());
+
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceMeterTicks)), &dataframe).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            warn!("failed to send count");
+        }
+    }
+}
+
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
     let periph = embassy_mspm0::init(Default::default());
     let mut led_output = Output::new(periph.PA25, embassy_mspm0::gpio::Level::Low);
     let mut led_output_2 = Output::new(periph.PA10, embassy_mspm0::gpio::Level::High);
-
+    let mut mlx_drdy = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
     let canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
 
-    // TRM says that TRACEID is unique per part shipped,
-    // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
-    // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
-    let traceid: u32 = unsafe{ core::ptr::read_volatile((0x41C4_0000) as *const u32) };
-
-    info!("traceid: {:08x}", traceid);
-
-    let mut s2 = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
     
-    let tx = periph.PA21;
-
+    // Configure UART first - we will use it in our panic handler.
     let mut config = embassy_mspm0::uart::Config::default();
     config.baudrate = 115200;
+    let mut uart = UartTx::new_blocking(periph.UART2, periph.PA21, config).unwrap();
 
-    //let mut uart = Uart::new_blocking(periph.UART0, rx, tx, config).unwrap();
-    let mut uart = UartTx::new_blocking(periph.UART2, tx, config).unwrap();
+    uart.blocking_write("hello\r\n".as_bytes()).unwrap();
 
-    uart.blocking_write("done\r\n".as_bytes()).unwrap();
-    info!("Init completed");
-    embassy_time::Timer::after(Duration::from_millis(100)).await;  
-
-    //let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, i2c::Config::default()).unwrap();
-    let mut cfg = i2c::Config::default();
-    cfg.bus_speed = i2c::BusSpeed::FastMode;
-    let mut i2cinter = i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, cfg).unwrap();
-
-    info!("was OK");
-    
-    //i2c_scan(&mut i2cinter).await;
-
-    let controller = flashdriver::FlashController::new(flashdriver::take().unwrap(), 0x0001_E000, 0x0002_0000);
-
-
-
-    // I think we have all (most) of the primitives we need.
-    // Now to tie it together.
-    // - MLX reading works, and can configure different rates and stuff.  It would be _nice_ to fix the i2c thing but it doesn't seem mandatory, especially if we disable the company check for now.
-    // - CAN is great.
-    // - sequential-storage seems to be working well too.
-    // We should fix all the unwraps to gracefully degrade if needed.
-    // Send a "uh oh" message on CAN instead of the hello if something fails to initialize correctly.
-    // Now we need a protocol which sends periodic hellos,
-    // allows configuring into "data dump" mode at 5hz which dumps values to CAN.
-    // Allows configuring the high/low range.
-    // Once an axis and level is determined, allows setting the desired axis and threshold.
-    // Once in "running" mode, monitors for sinusoidal input and sends outwards as a current count.
-    // Count is stored in flash every 10 minutes if changed (count the # of iterations there....) so we don't lose
-    // too much usage (or should this high-water mark be stored somewhere else?)
-    
-    //controller.erase(0x0001E000, 0x00020000).await.unwrap();
-
-    let mut storage = MapStorage::<u8, _, _>::new(controller, const { MapConfig::new(0x0001E000..0x00020000) }, NoCache::new());
-
-    let mut tmpbuf = [0x0u8; 80];
-    let result = storage.fetch_item::<[u8; 3]>(&mut tmpbuf, &0x01).await;
-    match result {
-        Ok(Some(v)) => {
-            defmt::info!("Got value: {:02x}", v);
-        }
-        Ok(None) => {
-            defmt::warn!("No value found!");
-        }
-        Err(e) => {
-            defmt::error!("Failed to fetch item: {}", e);
-        }
-    }
-
-    storage.store_item::<[u8; 3]>(&mut tmpbuf, &0x01, &[0x05, 0x10, 0xAB]).await.unwrap();
 
     let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, can::Config::default()).unwrap();
-    let (tx, rx, status) = candriver.split();
+    let (tx, mut rx, status) = candriver.split();
 
-    spawner.spawn(receiver(rx, OUTBOUND.dyn_sender()).unwrap());
     spawner.spawn(transmitter_mux(tx, OUTBOUND.dyn_receiver()).unwrap());
     spawner.spawn(periodic_hello(OUTBOUND.dyn_sender()).unwrap());
     spawner.spawn(can_maintainer(status).unwrap());
 
-    let mut outgoing = OUTBOUND.dyn_sender();
+    let outgoing = OUTBOUND.dyn_sender();
 
-    // or 0x10
-    let mut config = const {mlx::Config::new(2).unwrap()};
-    config.high_sensitivity = true;
-    let mut mlx = loop {
-        if let Ok(res) = Mlx90394::new_init(&mut i2cinter, &mut s2, 0x10, &config).await {
-            break res
-        } else {
-            info!("Failed. Trying again...");
-            Timer::after_millis(100).await;
+    // Send our "reset hello" indicating that we reset and why.
+    let rstcause_raw = (embassy_mspm0::pac::SYSCTL.rstcause().read().0 & 0x0F) as u8;
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceReset)), &[0x00, rstcause_raw]).unwrap();
+    outgoing.send(frame).await;
+
+    // Now that we have sent our reset cause,
+    // we can enable resetting upon a variety of non-recoverable faults...
+    embassy_mspm0::pac::SYSCTL.systemcfg().write(|w| {
+        w.set_flasheccrstdis(false);
+        w.set_wwdtlp0rstdis(false);
+        w.set_wwdtlp1rstdis(false);
+    });
+
+    // Enable our watchdog before we start initializing "risky" peripherals.
+    let mut watchdog_cfg = wwdt::Config::default();
+    watchdog_cfg.closed_window = wwdt::ClosedWindowPercentage::Zero;
+    watchdog_cfg.timeout = wwdt::Timeout::Sec4;
+    let mut watchdog = Watchdog::new(periph.WWDT0, watchdog_cfg);
+    watchdog.pet();
+
+    // Initialize i2c.
+    let mut cfg = i2c::Config::default();
+    cfg.bus_speed = i2c::BusSpeed::FastMode;
+    let mut i2cinter = match i2c::I2c::new_async(periph.I2C1, periph.PA4, periph.PA3, Irqs, cfg) {
+        Ok(drv) => drv,
+        Err(e) => {
+            error!("i2c config error: {}", e);
+
+           send_error_and_panic(0x01, &outgoing).await;
         }
     };
-    info!("Initialized");
 
-    loop {
-        /*if s2.is_low() {
-            led_output_2.set_high();
-        } else {
-            led_output_2.set_low();
-        }*/
+    let controller = flashdriver::FlashController::new(flashdriver::take().unwrap(), 0x0001_E000, 0x0002_0000);
+    let mut storage: MapStorage<u8, flashdriver::FlashController, NoCache> = MapStorage::<u8, _, _>::new(controller, const { MapConfig::new(0x0001E000..0x00020000) }, NoCache::new());
 
-        //if mlx.data_ready().await.unwrap() {
-            led_output.toggle();
-            match mlx.get_reading().await {
-                Ok(data) => {
-                    info!("Got readings: {:?}", data);
-                    //let magdata = data.serialize();
-                    //let frame =
-                    //can::frame::MCanFrame::new(Id::Standard(StandardId::new(0x129).unwrap()), &magdata)
-                    //    .unwrap();
-                    //outgoing.send(frame).await;
-                }
-                Err(e) => {
-                    defmt::warn!("failed to read: {}", e);
-                } 
+    //storage.store_item::<[u8; 3]>(&mut tmpbuf, &0x01, &[0x05, 0x10, 0xAB]).await.unwrap();
+    let meter_ticks: u32 = configutils::get_value_or(&mut storage, configutils::ConfigKey::MeterTicks, 0u32).await;
+    info!("Loaded meter ticks: {}", meter_ticks);
+    let mut mag_config: MagnetometerConfig = configutils::get_bitfield_or(&mut storage, configutils::ConfigKey::MagnetometerConfig, MagnetometerConfig::default()).await;
+
+    let mut pulse_counter = PulseCounter::new(mag_config.rising_val(), mag_config.rising_delta(), meter_ticks);
+
+    let starting_config: mlx::Config = match (&mag_config).try_into() {
+        Ok(cfg) => cfg,
+        Err(_) => {
+            error!("Config in flash is bad for mlx (flash corrupted!?)");
+            send_error_and_panic(0x02, &outgoing).await;
+        }
+    };
+
+    info!("Got starting MLX config: {}", starting_config);
+
+    let mut attempt = 0;
+    let mut mag = loop {
+        let addr = if attempt % 1 == 0 {0x10} else {0x60};
+
+        match select(
+            Mlx90394::new_init(&mut i2cinter, addr, &starting_config),
+            Timer::after_millis(250)
+        ).await {
+            Either::First(Ok(mlx)) => {
+                break mlx
             }
-            
+            Either::First(Err(_)) => {
+                attempt += 1;
+                if attempt > 10 {
+                    error!("Failed to initialize after multiple attempts - giving up!");
+                    send_error_and_panic(0x03, &outgoing).await;
+                }
+                info!("Failed. Trying again...");
+                watchdog.pet();
+                Timer::after_millis(100).await;
+            }
+            Either::Second(_) => {
+                error!("Detected bus latchup - not handling this right now.");
+                send_error_and_panic(0x04, &outgoing).await;
+            }
+        }
+    };
+    info!("Initialized MLX");
+    watchdog.pet();
 
+    // "debug mode" is triggered through a received CAN frame
+    // and causes the device to report the values of every reading,
+    // used for initial calibration and other debugging.
+    let mut is_debug_mode = false;
 
+    let mut last_pulse = Instant::now();
+
+    //
+    // States:
+    // - WAIT_RISE - waiting for value to climb past rising_val
+    // - RISING - value > crossed rising_val 
+    // - RISEN
+    // 
+    //
+    loop {
+        //if mlx.data_ready().await.unwrap() {
+            match select(rx.get_frame(), mlx_drdy.wait_for_low()).await {
+                Either::First(Ok(frame)) if is_for_device(&frame) => {
+                    match get_message_type(&frame) {
+                        Some(MessageType::DeviceDebugMode) => {
+                            if frame.data().len() >= 1 && frame.data()[0] == 0x01 {
+                                is_debug_mode = true;
+                                // reconfigure the magnetometer for debug mode - all axes, sensitivity depends on message, 5 hz.
+                                let mut cfg = const {mlx::Config::new(0x02).unwrap()}; // 5 hz;
+                                cfg.en_x = true;
+                                cfg.en_y = true;
+                                cfg.en_z = true;
+
+                                if frame.data().len() > 1 && frame.data()[1] == 0x01 {
+                                    cfg.high_sensitivity = true;
+                                } else {
+                                    cfg.high_sensitivity = false;
+                                }
+                                
+                                if let Err(e) = mag.reconfigure(&cfg).await {
+                                    warn!("Failed to reconfigure MLX... {}", e);
+                                    try_send_warning(0x01, &outgoing);
+                                } else {
+                                    try_send_ack(MessageType::DeviceDebugMode as u8, &outgoing);
+                                }
+                            } else {
+                                is_debug_mode = false;
+                                match (&mag_config).try_into() {
+                                    Ok(cfg) => {
+                                        if let Err(e) = mag.reconfigure(&cfg).await {
+                                            warn!("Failed to reconfigure MLX... {}", e);
+                                            try_send_warning(0x10, &outgoing);
+                                        } else {
+                                            try_send_ack(MessageType::DeviceDebugMode as u8, &outgoing);
+                                        }
+                                    },
+                                    Err(_) => {
+                                        warn!("invalid mlx config - this is super bad!");
+                                        try_send_warning(0x11, &outgoing);
+                                    }
+                                }
+                                
+                                try_send_ack(MessageType::DeviceDebugMode as u8, &outgoing);
+                            }
+                        },
+                        Some(MessageType::DeviceSetStartPoint) => {
+                            if frame.data().len() == 4 {
+                                let meter_ticks = u32::from_be_bytes(frame.data().try_into().unwrap());
+
+                                pulse_counter.set_count(meter_ticks);
+
+                                if let Err(e) = configutils::save_value(&mut storage, configutils::ConfigKey::MeterTicks, meter_ticks).await {
+                                    try_send_warning(0x02, &outgoing);
+                                    info!("Failed saving meter ticks: {}", e);
+                                } else {
+                                    try_send_ack(MessageType::DeviceSetStartPoint as u8, &outgoing);
+                                    info!("Saved meter ticks: {}", meter_ticks);
+                                }
+                            } else {
+                                try_send_warning(0x03, &outgoing);
+                            }
+                        },
+                        Some(MessageType::DeviceReconfigure) => {
+                            if frame.data().len() == 4 {
+                                let tmp_config = u32::from_be_bytes(frame.data().try_into().unwrap());
+                                
+                                mag_config = MagnetometerConfig::from(tmp_config);
+                                // ignore whatever rate was set, we'll always use 100Hz for real measurements.
+                                mag_config.set_rate(6);
+
+                                if let Err(e) = configutils::save_bitfield(&mut storage, configutils::ConfigKey::MagnetometerConfig, mag_config.clone()).await {
+                                    try_send_warning(0x04, &outgoing);
+                                    info!("Failed saving mag config: {}", e);
+                                } else {
+                                    try_send_ack(MessageType::DeviceSetStartPoint as u8, &outgoing);
+                                    info!("Saved new config: {}", mag_config);
+                                }
+                            } else {
+                                info!("Bad length for device reconfigure!");
+                                try_send_warning(0x05, &outgoing);
+                            }
+                        }
+                        _ => {
+                            info!("Ignoring frame of unknown / unhandled type")
+                        }
+                    }
+                },
+                Either::First(Ok(_)) => {
+                    // not for us, ignore.
+                }
+                Either::First(Err(_)) => {
+                    // ignore, won't ever happen
+                }
+                Either::Second(_) => {
+                    // data is ready for reading from magnetometer
+                    match mag.get_reading().await {
+                        Ok(data) => {
+                            info!("Got readings: {:?}", data);
+                            led_output.toggle();
+
+                            let magdata = data.serialize();
+
+                            if is_debug_mode {
+                                // safety: data frame is 7 bytes, will always fit.
+                                let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceRawData)), &magdata).unwrap();
+                                match outgoing.try_send(frame) {
+                                    Ok(_) => {},
+                                    Err(_) => {info!("Failed to enqueue data frame - buffer full?")}
+                                }
+                            }
+
+                            if data.overflowed {
+                                warn!("Missed reading - loop too slow!");
+                                try_send_warning(0xCC, &outgoing);
+                            }
+
+                            let (reading, saturated) = match mag_config.axis() {
+                                0 => {
+                                    (data.x, data.x_sat)
+                                },
+                                1 => {
+                                    (data.y, data.y_sat)
+                                },
+                                _ => {
+                                    (data.z, data.z_sat)
+                                }
+                            };
+
+                            if saturated {
+                                warn!("Saturated sensor - try using lower range!");
+                                try_send_warning(0xAB, &outgoing);
+                            } else {
+                                match pulse_counter.update(reading) {
+                                    Some(new_count) => {
+                                        if new_count % 1024 == 0 {
+                                            // Save to flash every 1000 counts so we don't lose too much progress.
+                                            if let Err(e) = configutils::save_value(&mut storage, configutils::ConfigKey::MeterTicks, new_count).await {
+                                                try_send_warning(0x02, &outgoing);
+                                                info!("Failed saving meter ticks: {}", e);
+                                            }
+                                        }
+                                        if new_count % 64 == 0 {
+                                            // publish to CAN every ~64 counts to avoid the bus being too noisy for high-flow.
+
+                                        }
+                                        last_pulse = Instant::now();
+                                        // this doesn't really need to be atomic, but it makes the borrow checker happy.
+                                        IS_METER_ACTIVE.store(true, Ordering::Relaxed);
+                                        led_output_2.toggle();
+                                    },
+                                    None => {
+                                        if last_pulse.elapsed() >= Duration::from_secs(20) {
+                                            // this doesn't really need to be atomic, but it makes the borrow checker happy.
+                                            if IS_METER_ACTIVE.load(Ordering::Relaxed) {
+                                                IS_METER_ACTIVE.store(false, Ordering::Relaxed);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                        }
+                        Err(e) => {
+                            defmt::warn!("failed to read: {}", e);
+                        } 
+                    }
+                }
+            };
             
-        //}
+            // drdy should happen at 5hz minimum, so this should never fail!
+            watchdog.pet();
 
     } 
 }

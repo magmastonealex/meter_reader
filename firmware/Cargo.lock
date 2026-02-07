@@ -375,6 +375,9 @@ version = "0.1.0"
 [[package]]
 name = "embassy-futures"
 version = "0.1.2"
+dependencies = [
+ "defmt 1.0.1",
+]
 
 [[package]]
 name = "embassy-hal-internal"
@@ -694,6 +697,7 @@ version = "0.1.0"
 dependencies = [
  "arbitrary-int 2.0.0",
  "bitbybit",
+ "bitfield 0.19.4",
  "cortex-m",
  "cortex-m-rt",
  "defmt 1.0.1",
@@ -701,6 +705,7 @@ dependencies = [
  "defmt-test",
  "derive-mmio",
  "embassy-executor",
+ "embassy-futures",
  "embassy-mspm0",
  "embassy-sync",
  "embassy-time",

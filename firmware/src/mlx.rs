@@ -68,9 +68,8 @@ impl MagReadings {
     }
 }
 
-pub struct Mlx90394<'a, 'b, I2C> {
+pub struct Mlx90394<'a, I2C> {
     i2c: &'a mut I2C,
-    drdy: &'a mut Input<'b>,
     address: u8,
 }
 
@@ -119,6 +118,7 @@ impl<E> From<E> for MlxError<E> {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, defmt::Format)]
 pub struct Config {
     pub high_sensitivity: bool,
     pub en_z: bool,
@@ -143,14 +143,17 @@ impl Config {
     }
 }
 
-impl<'a, 'b, I2C, E> Mlx90394<'a, 'b, I2C>
+impl<'a, I2C, E> Mlx90394<'a, I2C>
 where
     I2C: I2c<Error = E>,
-{
-    pub async fn new_init(i2c: &'a mut I2C, drdy: &'a mut Input<'b>, address: u8,  config: &Config) -> Result<Self, MlxError<E>> {
+{   
+    /// NOTE: a prior version of this driver accepted drdy input to await internally,
+    /// but I don't think the mspm0 i2c driver handles a future being dropped due to a timeout very well.
+    /// I want to be very careful in my "select" in the main loop so I only select on drdy or a CAN frame,
+    /// and don't wind up interrupting an i2c transaction halfway through which would be... bad.
+    pub async fn new_init(i2c: &'a mut I2C,address: u8, config: &Config) -> Result<Self, MlxError<E>> {
         let mut inst = Self {
             i2c,
-            drdy,
             address
         };
 
@@ -175,6 +178,7 @@ where
     }
 
     pub async fn reconfigure(&mut self, config: &Config) -> Result<(), MlxError<E>> {
+        info!("Configuring MLX with: {}", config);
         // stop measurements.
         let ctrl1: u8 = 0; // disable everything.
         self.write_register(REG_CTRL1, ctrl1).await?;
@@ -237,7 +241,6 @@ where
 
     pub async fn get_reading(&mut self) -> Result<MagReadings, MlxError<E>> {
         let mut main_data = [0x0u8; 8];
-        self.drdy.wait_for_low().await;
         
         // this data is semi-garbage.
         // I wonder if it's being treated as a "direct read" somehow and starting from 0x00,
