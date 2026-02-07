@@ -243,7 +243,6 @@ impl FlashController {
     /// useful for implementing the embedded-storage traits.
     /// also used to test "unaligned" read accesses.
     pub fn ll_read(&self, addr: u32, data: &mut [u8]) {
-        debug!("Performing read at 0x{:08X}", addr);
         let flash_data = unsafe { core::slice::from_raw_parts(addr as *const u8, data.len()) };
         data.copy_from_slice(flash_data);
     }

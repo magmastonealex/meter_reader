@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use defmt::info;
-use embassy_mspm0::gpio::Input;
 use embedded_hal_async::i2c::{I2c};
 
 #[derive(Debug, PartialEq, Eq, defmt::Format)]
