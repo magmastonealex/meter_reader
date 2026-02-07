@@ -1,9 +1,8 @@
 //! Helper functions to load and save configuration values from a sequential-storage instance.
 
 use embedded_storage_async::nor_flash::NorFlash;
-use sequential_storage::{Error, cache::KeyCacheImpl, map::{MapStorage, Value}};
+use sequential_storage::{cache::KeyCacheImpl, map::{MapStorage, Value}};
 
-use crate::flashdriver::FlashError;
 use bitfield::bitfield;
 const MAX_KEY_PLUS_VALUE: usize = 0x80;
 
@@ -47,7 +46,7 @@ impl Default for MagnetometerConfig {
         let mut this = MagnetometerConfig(0);
         this.set_axis(0);
         this.set_high_sensitivity(false);
-        this.set_rate(2);
+        this.set_rate(6);
 
         this.set_rising_delta(100);
 

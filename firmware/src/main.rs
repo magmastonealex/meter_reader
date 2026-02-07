@@ -3,7 +3,6 @@
 
 mod mlx;
 
-use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 
 use embassy_futures::select::{Either, select};
@@ -22,7 +21,7 @@ use embassy_mspm0::peripherals::{I2C1, CANFD0};
 use embassy_mspm0::uart::UartTx;
 
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embedded_hal_async::i2c::{I2c, ErrorKind, Error as I2cError};
+use embedded_hal_async::i2c::I2c;
 use embedded_io_async::Write;
 
 use embassy_sync::channel::{Channel, DynamicReceiver, DynamicSender};
@@ -96,27 +95,28 @@ enum MessageType {
     DeviceMeterActive = 0x13,
 
     /// Request device enter debug mode to dump data at 5hz.
-    DeviceDebugMode = 0x20,
+    DeviceDebugMode = 0x14,
 
-    DeviceReconfigure = 0x21,
+    DeviceReconfigure = 0x15,
 
-    DeviceSetStartPoint = 0x22,
-    DevicePleaseReset = 0x23,
+    DeviceSetStartPoint = 0x16,
+    DevicePleaseReset = 0x17,
 }
 
 impl TryFrom<u8> for MessageType {
     type Error = ();
     fn try_from(value: u8) -> Result<Self, Self::Error> {
+        info!("checking against: {:02x}", value);
         match value {
             0x0F => Ok(MessageType::DeviceReset),
             0x00 => Ok(MessageType::DeviceError),
             0x10 => Ok(MessageType::DeviceHello),
             0x11 => Ok(MessageType::DeviceRawData),
             0x12 => Ok(MessageType::DeviceMeterTicks),
-            0x20 => Ok(MessageType::DeviceDebugMode),
-            0x21 => Ok(MessageType::DeviceReconfigure),
-            0x22 => Ok(MessageType::DeviceSetStartPoint),
-            0x23 => Ok(MessageType::DevicePleaseReset),
+            0x14 => Ok(MessageType::DeviceDebugMode),
+            0x15 => Ok(MessageType::DeviceReconfigure),
+            0x16 => Ok(MessageType::DeviceSetStartPoint),
+            0x17 => Ok(MessageType::DevicePleaseReset),
             _ => Err(())
         }
     }
@@ -131,19 +131,22 @@ static DEVICE_ADDR_SUFFIX: LazyLock<u32> = LazyLock::new(|| {
     // though https://e2e.ti.com/support/microcontrollers/arm-based-microcontrollers-group/arm-based-microcontrollers/f/arm-based-microcontrollers-forum/1302805/lp-mspm0l1306-identifying-a-unique-id-for-each-part
     // casts some doubt on that. I suspect traceid is like a serial number but only within the actual unique dies, so would need to be qualified by deviceid/userid in more hardened situations
     info!("traceid: {:08x}", traceid);
-    traceid & (0x1FFFFF)
+    traceid & (0xFFFF)
 });
 
-const fn get_can_id(device_suffix: u32, message_type: MessageType) -> ExtendedId {
+fn get_can_id(device_suffix: u32, message_type: MessageType) -> ExtendedId {
     let typ: u8 = message_type as u8;
-    let extid = (device_suffix & 0x1FFFFF) | ((typ as u32) << 21);
+    info!("type: {:02x}, suffix: {:08x}, anded: {:08x}", typ, device_suffix, (device_suffix & 0xFFFF));
+    //0017edf1
+    //1FFFFFFF
+    let extid = (device_suffix & 0xFFFF) | ((typ as u32) << 16);
 
     ExtendedId::new(extid).unwrap()
 }
 
 fn is_for_device(frame: &MCanFrame) -> bool {
     if let Id::Extended(e) = frame.id() {
-        (e.as_raw() & 0x1FFFFF) == *DEVICE_ADDR_SUFFIX.get()
+        (e.as_raw() & 0xFFFF) == *DEVICE_ADDR_SUFFIX.get()
     } else {
         false
     }
@@ -151,7 +154,8 @@ fn is_for_device(frame: &MCanFrame) -> bool {
 
 fn get_message_type(frame: &MCanFrame) -> Option<MessageType> {
     if let Id::Extended(e) = frame.id() {
-        match MessageType::try_from((e.as_raw() >> 21) as u8) {
+        info!("frame id for type: {:08x}", e.as_raw());
+        match MessageType::try_from((e.as_raw() >> 16) as u8) {
             Ok(typ) => {
                 Some(typ)
             },
@@ -397,7 +401,7 @@ async fn main(spawner: Spawner) -> ! {
         }
     };
 
-    info!("Got starting MLX config: {}", starting_config);
+    info!("Got starting MLX config: {}", mag_config);
 
     let mut attempt = 0;
     let mut mag = loop {
@@ -548,8 +552,9 @@ async fn main(spawner: Spawner) -> ! {
                         }
                     }
                 },
-                Either::First(Ok(_)) => {
+                Either::First(Ok(f)) => {
                     // not for us, ignore.
+                    info!("Frame not for us: {}", f);
                 }
                 Either::First(Err(_)) => {
                     // ignore, won't ever happen
@@ -558,12 +563,13 @@ async fn main(spawner: Spawner) -> ! {
                     // data is ready for reading from magnetometer
                     match mag.get_reading().await {
                         Ok(data) => {
-                            info!("Got readings: {:?}", data);
+                            
                             led_output.toggle();
 
                             let magdata = data.serialize();
 
                             if is_debug_mode {
+                                info!("Got readings: {:?}", data);
                                 // safety: data frame is 7 bytes, will always fit.
                                 let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceRawData)), &magdata).unwrap();
                                 match outgoing.try_send(frame) {
@@ -604,7 +610,7 @@ async fn main(spawner: Spawner) -> ! {
                                         }
                                         if new_count % 64 == 0 {
                                             // publish to CAN every ~64 counts to avoid the bus being too noisy for high-flow.
-
+                                            try_send_count(new_count, &outgoing);
                                         }
                                         last_pulse = Instant::now();
                                         // this doesn't really need to be atomic, but it makes the borrow checker happy.
