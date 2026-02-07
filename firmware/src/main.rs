@@ -11,6 +11,7 @@ use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
 use embassy_mspm0::mode::Async;
 use embassy_mspm0::gpio::Output;
+use embassy_mspm0::pac::sysctl::vals::ResetcmdKey;
 use embassy_sync::lazy_lock::LazyLock;
 
 use embassy_mspm0::wwdt::{self, Watchdog};
@@ -435,13 +436,7 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut last_pulse = Instant::now();
 
-    //
-    // States:
-    // - WAIT_RISE - waiting for value to climb past rising_val
-    // - RISING - value > crossed rising_val 
-    // - RISEN
-    // 
-    //
+
     loop {
         //if mlx.data_ready().await.unwrap() {
             match select(rx.get_frame(), mlx_drdy.wait_for_low()).await {
@@ -523,6 +518,29 @@ async fn main(spawner: Spawner) -> ! {
                             } else {
                                 info!("Bad length for device reconfigure!");
                                 try_send_warning(0x05, &outgoing);
+                            }
+                        }
+                        Some(MessageType::DevicePleaseReset) => {
+                            if frame.data().len() == 4 {
+                                let data = frame.data();
+                                if data[0] == 0xBA && data[1] == 0xAD && data[2] == 0xF0 && data[3] == 0x0D {
+                                    try_send_ack(MessageType::DevicePleaseReset as u8, &outgoing);
+
+                                    // give the ack a moment to get to the bus.
+                                    Timer::after_millis(100).await;
+
+                                    // reset the CPU. See you next time!
+                                    embassy_mspm0::pac::SYSCTL.resetlevel().write(|w| {
+                                        w.set_level(embassy_mspm0::pac::sysctl::vals::ResetlevelLevel::POR);
+                                    });
+                                    embassy_mspm0::pac::SYSCTL.resetcmd().write(|w| {
+                                        w.set_key(ResetcmdKey::KEY);
+                                        w.set_go(true);
+                                    });
+                                }
+                            } else {
+                                info!("Bad length for reset!");
+                                try_send_warning(0xFE, &outgoing);
                             }
                         }
                         _ => {
