@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use defmt::info;
+use embassy_time::Timer;
 use embedded_hal_async::i2c::{I2c};
 
 #[derive(Debug, PartialEq, Eq, defmt::Format)]
@@ -165,6 +166,10 @@ where
         }
 
         inst.write_register(REG_RESET, 0x06).await?;
+        
+        // wait a bit of a while for it to come out of reset.
+        Timer::after_millis(10).await;
+
         let stat1 = inst.read_register(REG_STAT1).await?;
         if stat1 & (1<<3) == 0 {
             // not reset?
