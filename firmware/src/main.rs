@@ -3,6 +3,8 @@
 
 mod mlx;
 
+use core::fmt;
+use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 
 use embassy_futures::select::{Either, select};
@@ -43,7 +45,7 @@ use defmt_rtt as _;
 
 mod pulse_counter;
 
-use panic_probe as _;
+//use panic_probe as _;
 use sequential_storage::cache::NoCache;
 use sequential_storage::map::{MapConfig, MapStorage};
 
@@ -98,6 +100,8 @@ enum MessageType {
     DeviceDebugMode = 0x14,
 
     DeviceReconfigure = 0x15,
+    DeviceGetCurrentConfig = 0x18,
+    DeviceGetCurrentConfigResp=0x19,
 
     DeviceSetStartPoint = 0x16,
     DevicePleaseReset = 0x17,
@@ -117,6 +121,8 @@ impl TryFrom<u8> for MessageType {
             0x15 => Ok(MessageType::DeviceReconfigure),
             0x16 => Ok(MessageType::DeviceSetStartPoint),
             0x17 => Ok(MessageType::DevicePleaseReset),
+            0x18 => Ok(MessageType::DeviceGetCurrentConfig),
+            0x19 => Ok(MessageType::DeviceGetCurrentConfigResp),
             _ => Err(())
         }
     }
@@ -136,7 +142,6 @@ static DEVICE_ADDR_SUFFIX: LazyLock<u32> = LazyLock::new(|| {
 
 fn get_can_id(device_suffix: u32, message_type: MessageType) -> ExtendedId {
     let typ: u8 = message_type as u8;
-    info!("type: {:02x}, suffix: {:08x}, anded: {:08x}", typ, device_suffix, (device_suffix & 0xFFFF));
     //0017edf1
     //1FFFFFFF
     let extid = (device_suffix & 0xFFFF) | ((typ as u32) << 16);
@@ -172,7 +177,7 @@ fn get_message_type(frame: &MCanFrame) -> Option<MessageType> {
 // This panic handler dumps stuff to UART.
 // Note this is not particularly code-size efficient as it brings in a lot of formatting garbage just for panics (>> 10KB).
 // This is fine for development where panics are possible, but should really be disabled in production releases.
-/*#[panic_handler]
+#[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     static PANICKED: AtomicBool = AtomicBool::new(false);
 
@@ -199,8 +204,15 @@ fn panic(info: &PanicInfo) -> ! {
 
     loop {
         // hope you remembered to set a watchdog.
+        embassy_mspm0::pac::SYSCTL.resetlevel().write(|w| {
+            w.set_level(embassy_mspm0::pac::sysctl::vals::ResetlevelLevel::POR);
+        });
+        embassy_mspm0::pac::SYSCTL.resetcmd().write(|w| {
+            w.set_key(ResetcmdKey::KEY);
+            w.set_go(true);
+        });
     }
-}*/
+}
 
 /// Hardfault handler.
 ///
@@ -224,7 +236,7 @@ async fn periodic_hello(outgoing: DynamicSender<'static, MCanFrame>) {
         if IS_METER_ACTIVE.load(Ordering::Relaxed) {
             data[1] = 0x01;
         }
-        Timer::after_secs(10).await;
+        Timer::after_secs(5).await;
         let frame = MCanFrame::new(Id::Extended(id), &data).unwrap();
         match outgoing.try_send(frame) {
             Ok(_) => {},
@@ -393,6 +405,8 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut pulse_counter = PulseCounter::new(mag_config.rising_val(), mag_config.rising_delta(), meter_ticks);
 
+    try_send_count(pulse_counter.count(), &outgoing);
+
     let starting_config: mlx::Config = match (&mag_config).try_into() {
         Ok(cfg) => cfg,
         Err(_) => {
@@ -439,7 +453,7 @@ async fn main(spawner: Spawner) -> ! {
     let mut is_debug_mode = false;
 
     let mut last_pulse = Instant::now();
-
+    let mut last_update = Instant::now();
 
     loop {
         //if mlx.data_ready().await.unwrap() {
@@ -483,8 +497,6 @@ async fn main(spawner: Spawner) -> ! {
                                         try_send_warning(0x11, &outgoing);
                                     }
                                 }
-                                
-                                try_send_ack(MessageType::DeviceDebugMode as u8, &outgoing);
                             }
                         },
                         Some(MessageType::DeviceSetStartPoint) => {
@@ -516,7 +528,7 @@ async fn main(spawner: Spawner) -> ! {
                                     try_send_warning(0x04, &outgoing);
                                     info!("Failed saving mag config: {}", e);
                                 } else {
-                                    try_send_ack(MessageType::DeviceSetStartPoint as u8, &outgoing);
+                                    try_send_ack(MessageType::DeviceReconfigure as u8, &outgoing);
                                     info!("Saved new config: {}", mag_config);
                                 }
                             } else {
@@ -545,6 +557,21 @@ async fn main(spawner: Spawner) -> ! {
                             } else {
                                 info!("Bad length for reset!");
                                 try_send_warning(0xFE, &outgoing);
+                            }
+                        },
+                        Some(MessageType::DeviceGetCurrentConfig) => {
+                            let cfg = configutils::get_bitfield_or(&mut storage, configutils::ConfigKey::MagnetometerConfig, MagnetometerConfig::default()).await;
+                            let mut dataframe = [0x00u8; 5];
+
+                            dataframe[1..5].copy_from_slice(&cfg.0.to_be_bytes());
+
+                            let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceGetCurrentConfigResp)), &dataframe).unwrap();
+                            match outgoing.try_send(frame) {
+                                Ok(_) => {},
+                                Err(_) => {
+                                    warn!("failed to send cfg");
+                                    try_send_warning(0x80, &outgoing);
+                                }
                             }
                         }
                         _ => {
@@ -601,14 +628,14 @@ async fn main(spawner: Spawner) -> ! {
                             } else {
                                 match pulse_counter.update(reading) {
                                     Some(new_count) => {
-                                        if new_count % 1024 == 0 {
+                                        if new_count % 10 == 0 {
                                             // Save to flash every 1000 counts so we don't lose too much progress.
                                             if let Err(e) = configutils::save_value(&mut storage, configutils::ConfigKey::MeterTicks, new_count).await {
                                                 try_send_warning(0x02, &outgoing);
                                                 info!("Failed saving meter ticks: {}", e);
                                             }
                                         }
-                                        if new_count % 64 == 0 {
+                                        if new_count % 2 == 0 {
                                             // publish to CAN every ~64 counts to avoid the bus being too noisy for high-flow.
                                             try_send_count(new_count, &outgoing);
                                         }
@@ -623,6 +650,10 @@ async fn main(spawner: Spawner) -> ! {
                                             if IS_METER_ACTIVE.load(Ordering::Relaxed) {
                                                 IS_METER_ACTIVE.store(false, Ordering::Relaxed);
                                             }
+                                        }
+                                        if last_update.elapsed() >= Duration::from_secs(30) {
+                                            try_send_count(pulse_counter.count(), &outgoing);
+                                            last_update = Instant::now();
                                         }
                                     }
                                 }
