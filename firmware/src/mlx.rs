@@ -157,7 +157,12 @@ where
             address
         };
 
+        // Note: writing to the wrong sensor first causes misbehaviour. I think this might be an i2c driver issue, since
+        // the bytes on the wire are "shifted" by one so to speak.
+        // regardless, doing a read to detect devices instead of a write resolves it.
         let mut cidbuf: [u8; 2] = [0u8; 2];
+
+        inst.read_registers_base(&mut cidbuf[0..1]).await?;
 
         inst.read_registers(REG_COMPANY_ID, &mut cidbuf).await?;
 
@@ -225,12 +230,17 @@ where
             
         self.write_register(REG_CTRL1, ctrl1).await?;
 
+        let reg1 = self.read_register(REG_CTRL1).await?;
+        info!("register is: {:08x}", reg1);
+
         Ok(())
     }
 
     pub async fn data_ready(&mut self) -> Result<bool, MlxError<E>> {
-        let stat1 = self.read_register(REG_STAT1).await?;
-        if (stat1 & (1<<0)) != 0 {
+        let mut stat1 = [0x00u8; 1];
+        self.read_registers_base(&mut stat1).await?;
+
+        if (stat1[0] & (1<<0)) != 0 {
             return Ok(true);
         } else {
             return Ok(false);

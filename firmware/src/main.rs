@@ -17,7 +17,7 @@ use embassy_sync::lazy_lock::LazyLock;
 
 use embassy_mspm0::wwdt::{self, Watchdog};
 use embassy_mspm0::{bind_interrupts, can};
-use embassy_mspm0::i2c::{self};
+use embassy_mspm0::i2c::{self, I2c as PeriphI2c};
 use embassy_mspm0::peripherals::{I2C1, CANFD0};
 
 use embassy_mspm0::uart::UartTx;
@@ -50,6 +50,7 @@ use sequential_storage::cache::NoCache;
 use sequential_storage::map::{MapConfig, MapStorage};
 
 use crate::configutils::MagnetometerConfig;
+use crate::mlx::MlxError;
 use crate::pulse_counter::PulseCounter;
 
 bind_interrupts!(struct Irqs {
@@ -105,6 +106,7 @@ enum MessageType {
 
     DeviceSetStartPoint = 0x16,
     DevicePleaseReset = 0x17,
+    DeviceCANStatus = 0x1a,
 }
 
 impl TryFrom<u8> for MessageType {
@@ -118,6 +120,7 @@ impl TryFrom<u8> for MessageType {
             0x11 => Ok(MessageType::DeviceRawData),
             0x12 => Ok(MessageType::DeviceMeterTicks),
             0x14 => Ok(MessageType::DeviceDebugMode),
+            0x1a => Ok(MessageType::DeviceCANStatus),
             0x15 => Ok(MessageType::DeviceReconfigure),
             0x16 => Ok(MessageType::DeviceSetStartPoint),
             0x17 => Ok(MessageType::DevicePleaseReset),
@@ -267,7 +270,8 @@ async fn receiver(mut rx: can::CanRx<Async>, outgoing: DynamicSender<'static, MC
 }
 
 #[embassy_executor::task]
-async fn can_maintainer(mut status: can::CanStatus<'static>) {
+async fn can_maintainer(mut status: can::CanStatus<'static>, outgoing: DynamicSender<'static, MCanFrame>) {
+    let mut interval = 0;
     loop {
         Timer::after_secs(3).await;
 
@@ -284,6 +288,12 @@ async fn can_maintainer(mut status: can::CanStatus<'static>) {
                 Err(e) => {
                     warn!("Bus-off recovery failed: {}", e);
                 }
+            }
+        } else {
+            interval += 1;
+            if interval > 5 {
+                interval = 0;
+                try_send_canstats(errors.tec, errors.rec, &outgoing);
             }
         }
     }
@@ -336,6 +346,37 @@ fn try_send_count(ticks: u32, outgoing: &DynamicSender<'_, MCanFrame>) {
     }
 }
 
+fn try_send_canstats(tec: u8, rec: u8, outgoing: &DynamicSender<'_, MCanFrame>) {
+    let mut dataframe = [0x00u8; 3];
+
+    dataframe[1] = tec;
+    dataframe[2] = rec;
+
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceCANStatus)), &dataframe).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            warn!("failed to send count");
+        }
+    }
+}
+
+async fn wait_for_drdy(mag: &mut Mlx90394<'_, PeriphI2c<'_, Async>>) {
+    loop {
+        match mag.data_ready().await {
+            Ok(v) => {
+                if v {
+                    return;
+                }
+            },
+            Err(e) => {
+                warn!("Got MLX error: {}", e);
+                Timer::after_millis(100).await;
+            }
+        }
+
+    }
+}
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
@@ -359,7 +400,7 @@ async fn main(spawner: Spawner) -> ! {
 
     spawner.spawn(transmitter_mux(tx, OUTBOUND.dyn_receiver()).unwrap());
     spawner.spawn(periodic_hello(OUTBOUND.dyn_sender()).unwrap());
-    spawner.spawn(can_maintainer(status).unwrap());
+    spawner.spawn(can_maintainer(status, OUTBOUND.dyn_sender()).unwrap());
 
     let outgoing = OUTBOUND.dyn_sender();
 
@@ -419,7 +460,7 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut attempt = 0;
     let mut mag = loop {
-        let addr = if attempt % 1 == 0 {0x10} else {0x60};
+        let addr = if attempt % 2 == 0 {0x10} else {0x60};
 
         match select(
             Mlx90394::new_init(&mut i2cinter, addr, &starting_config),
@@ -431,15 +472,16 @@ async fn main(spawner: Spawner) -> ! {
             Either::First(Err(_)) => {
                 attempt += 1;
                 if attempt > 10 {
-                    error!("Failed to initialize after multiple attempts - giving up!");
+                    error!("Failed to initialize after multiple attempts - giving up");
                     send_error_and_panic(0x03, &outgoing).await;
                 }
-                info!("Failed. Trying again...");
+                info!("Failed. Trying again... {}", addr);
                 watchdog.pet();
                 Timer::after_millis(100).await;
             }
             Either::Second(_) => {
                 error!("Detected bus latchup - not handling this right now.");
+                uart.blocking_write("latchup\r\n".as_bytes()).unwrap();
                 send_error_and_panic(0x04, &outgoing).await;
             }
         }
