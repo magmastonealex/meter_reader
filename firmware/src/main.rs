@@ -8,6 +8,7 @@ use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicBool, Ordering, compiler_fence};
 
 use embassy_futures::select::{Either, select};
+use embassy_mspm0::can::CanTimings;
 use embassy_mspm0::can::frame::MCanFrame;
 use embassy_mspm0::gpio::Input;
 use embassy_mspm0::mode::Async;
@@ -386,6 +387,26 @@ async fn main(spawner: Spawner) -> ! {
     let mut mlx_drdy = Input::new(periph.PA24, embassy_mspm0::gpio::Pull::Up);
     let canstb = Output::new(periph.PA0, embassy_mspm0::gpio::Level::Low);
 
+    // Hack: Set up HFXT with the 25MHz oscillator
+    // We'll use this for clocking the CAN peripheral
+    // PA6 - PINCM11. Pin function 6 is HFCLK_IN.
+    embassy_mspm0::pac::IOMUX.pincm(10).modify(|w| {
+        w.set_pf(6);
+        w.set_inena(true);
+        w.set_pc(true);
+    });
+    embassy_mspm0::pac::SYSCTL.hsclken().modify(|w| {
+        w.set_useexthfclk(true);
+    });
+
+    let mut cnt = 0;
+    while !embassy_mspm0::pac::SYSCTL.clkstatus().read().hfclkgood() {
+        if cnt > 100000 {
+            panic!("no hfclk");
+        }
+        cnt += 1;
+        cortex_m::asm::delay(100);
+    }
     
     // Configure UART first - we will use it in our panic handler.
     let mut config = embassy_mspm0::uart::Config::default();
@@ -395,7 +416,9 @@ async fn main(spawner: Spawner) -> ! {
     uart.blocking_write("hello\r\n".as_bytes()).unwrap();
 
 
-    let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, can::Config::default()).unwrap();
+    let mut mcan_config = can::Config::default();
+    mcan_config.timing = CanTimings { brp: 1, sjw: 30, ntseg1: 219, ntseg2: 30 };
+    let candriver = can::Can::new_async(periph.CANFD0, periph.PA27, periph.PA26, Irqs, mcan_config).unwrap();
     let (tx, mut rx, status) = candriver.split();
 
     spawner.spawn(transmitter_mux(tx, OUTBOUND.dyn_receiver()).unwrap());
@@ -457,6 +480,7 @@ async fn main(spawner: Spawner) -> ! {
     };
 
     info!("Got starting MLX config: {}", mag_config);
+    info!("clk status? {:x}", embassy_mspm0::pac::SYSCTL.clkstatus().read().hfclkgood());
 
     let mut attempt = 0;
     let mut mag = loop {
