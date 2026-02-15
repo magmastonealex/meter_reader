@@ -694,14 +694,14 @@ async fn main(spawner: Spawner) -> ! {
                             } else {
                                 match pulse_counter.update(reading) {
                                     Some(new_count) => {
-                                        if new_count % 10 == 0 {
+                                        if new_count % 1024 == 0 {
                                             // Save to flash every 1000 counts so we don't lose too much progress.
                                             if let Err(e) = configutils::save_value(&mut storage, configutils::ConfigKey::MeterTicks, new_count).await {
                                                 try_send_warning(0x02, &outgoing);
                                                 info!("Failed saving meter ticks: {}", e);
                                             }
                                         }
-                                        if new_count % 2 == 0 {
+                                        if new_count % 64 == 0 {
                                             // publish to CAN every ~64 counts to avoid the bus being too noisy for high-flow.
                                             try_send_count(new_count, &outgoing);
                                         }
