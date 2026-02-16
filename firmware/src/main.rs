@@ -19,7 +19,7 @@ use embassy_sync::lazy_lock::LazyLock;
 use embassy_mspm0::wwdt::{self, Watchdog};
 use embassy_mspm0::{bind_interrupts, can};
 use embassy_mspm0::i2c::{self, I2c as PeriphI2c};
-use embassy_mspm0::peripherals::{I2C1, CANFD0};
+use embassy_mspm0::peripherals::{I2C1, CANFD0, ADC0};
 
 use embassy_mspm0::uart::UartTx;
 
@@ -54,9 +54,12 @@ use crate::configutils::MagnetometerConfig;
 use crate::mlx::MlxError;
 use crate::pulse_counter::PulseCounter;
 
+use embassy_mspm0::adc::{self, Adc, Vrsel};
+
 bind_interrupts!(struct Irqs {
     I2C1 => i2c::InterruptHandler<I2C1>;
     CANFD0 => can::InterruptHandler<CANFD0>;
+    ADC0 => adc::InterruptHandler<ADC0>;
 });
 
 
@@ -108,6 +111,7 @@ enum MessageType {
     DeviceSetStartPoint = 0x16,
     DevicePleaseReset = 0x17,
     DeviceCANStatus = 0x1a,
+    DeviceTemperature = 0x1b,
 }
 
 impl TryFrom<u8> for MessageType {
@@ -127,6 +131,7 @@ impl TryFrom<u8> for MessageType {
             0x17 => Ok(MessageType::DevicePleaseReset),
             0x18 => Ok(MessageType::DeviceGetCurrentConfig),
             0x19 => Ok(MessageType::DeviceGetCurrentConfigResp),
+            0x1b => Ok(MessageType::DeviceTemperature),
             _ => Err(())
         }
     }
@@ -300,6 +305,53 @@ async fn can_maintainer(mut status: can::CanStatus<'static>, outgoing: DynamicSe
     }
 }
 
+#[embassy_executor::task]
+async fn temperature_monitor(mut converter: Adc<'static, ADC0, Async>, outgoing: DynamicSender<'static, MCanFrame>) {
+    let temp_calibration: i32 = unsafe{ core::ptr::read_volatile((0x41C4_003C) as *const u32) } as i32;
+    // per datasheet, this is ~30C calibrated with an input reference of 3.3V.
+    // In theory, could multiply by 2.357 to get the expected value with a reference of 1.4V...
+    // (3.3V/4096) * (816-0.5) = 0.657019043 volts
+    // (3.3V/4096) * (798-0.5) = 0.64251709 volts
+    // (1/-0.0018) * (0.6570-0.6435)+30 = 22.5 (reasonable value)
+    // 
+    // Sub everything in:
+    // 1/-0.0018 * ((3.3V/4096) * (816-0.5) - (3.3V/4096) * (798-0.5)) + 30
+    // Extract factors:
+    // (1/-0018 * 3.3V/4096 * (R-C)) + 30
+    // (3.3V / (4096 * -0.0018)) * (R-C) + 30
+    // -0.447591146 * (R-C) + 30
+    // Report in decidegrees to avoid need for floating point - multiply everything by 10:
+    // -4.476 * (R-C) + 300
+    // Multiply by a large constant (4096 for a bit-shift division) then divide later to avoid floating-point math:
+    // (-18333 * (R-C))/4096 + 300 = Temp
+    // why the heck were TI's formulas using floating point!
+    let mut tmp_arr = [0i32; 5];
+    'outer: loop {
+        let mut avg = 0i32;
+        for i in 0..5 {
+            tmp_arr[i] = converter.read_channel_raw(11).await as i32;
+            avg += tmp_arr[i];
+        }
+        
+        avg = avg / 5;
+
+        for i in 0..5 {
+            // attempt to detect ADC_ERR_06 - samples way outside the average are likely an unreported conversion error.
+            if tmp_arr[i].abs_diff(avg) > 10 {
+                
+                Timer::after_millis(100).await;
+                continue 'outer;
+            }
+        }
+
+        let temp_decidegrees: i32 = (((-18333i32) * (avg - temp_calibration)) >> 12) + 300;
+
+        info!("Conversion result temperature: {}", temp_decidegrees);
+        try_send_temperature(temp_decidegrees, &outgoing);
+        Timer::after_millis(90000).await;
+    }
+}
+
 
 async fn send_error_and_panic(reason: u8, outgoing: &DynamicSender<'_, MCanFrame>) -> ! {
     let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceError)), &[0x00, reason]).unwrap();
@@ -354,6 +406,20 @@ fn try_send_canstats(tec: u8, rec: u8, outgoing: &DynamicSender<'_, MCanFrame>) 
     dataframe[2] = rec;
 
     let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceCANStatus)), &dataframe).unwrap();
+    match outgoing.try_send(frame) {
+        Ok(_) => {},
+        Err(_) => {
+            warn!("failed to send count");
+        }
+    }
+}
+
+fn try_send_temperature(temperature_deci: i32, outgoing: &DynamicSender<'_, MCanFrame>) {
+    let mut dataframe = [0x00u8; 5];
+
+    dataframe[1..5].copy_from_slice(&temperature_deci.to_be_bytes());
+
+    let frame = MCanFrame::new(Id::Extended(get_can_id(*DEVICE_ADDR_SUFFIX.get(), MessageType::DeviceTemperature)), &dataframe).unwrap();
     match outgoing.try_send(frame) {
         Ok(_) => {},
         Err(_) => {
@@ -446,6 +512,14 @@ async fn main(spawner: Spawner) -> ! {
     watchdog_cfg.timeout = wwdt::Timeout::Sec4;
     let mut watchdog = Watchdog::new(periph.WWDT0, watchdog_cfg);
     watchdog.pet();
+
+
+    let mut adconfig = adc::Config::default();
+    adconfig.resolution = adc::Resolution::BIT12;
+    adconfig.vr_select = adc::Vrsel::VddaVssa; // Datasheet says trim is calibrated using 3.3V, TRM says 1.4V internal reference. we'll try both and see which produces less garbage.
+    adconfig.sample_time = 150;
+    let converter = Adc::new_async(periph.ADC0, adconfig, Irqs);
+    spawner.spawn(temperature_monitor(converter, OUTBOUND.dyn_sender()).unwrap());
 
     // Initialize i2c.
     let mut cfg = i2c::Config::default();
