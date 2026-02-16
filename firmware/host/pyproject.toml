@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "meter-reader-host"
+version = "0.1.0"
+description = "Host-side tooling for the CAN-based meter reader"
+requires-python = ">=3.11"
+dependencies = [
+    "python-can>=4.4",
+    "textual>=1.0",
+    "click>=8.1",
+    "matplotlib>=3.10.8",
+]
+
+[project.optional-dependencies]
+graph = ["matplotlib>=3.7"]
+
+[project.scripts]
+meter-reader-tui = "meter_reader_host.tui:main"
+meter-reader-cli = "meter_reader_host.cli:cli"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/meter_reader_host"]
